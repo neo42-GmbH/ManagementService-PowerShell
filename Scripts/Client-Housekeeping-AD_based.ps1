@@ -1,4 +1,4 @@
-#Requires -Version 4
+﻿#Requires -Version 4
 #+Requires -Modules ActiveDirectory (Added Advisory on Missing Module below)
 <#
 .SYNOPSIS

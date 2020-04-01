@@ -1,4 +1,4 @@
-#requires -version 4
+﻿#requires -version 4
 <#
 .SYNOPSIS
     Tests the connection to the Management Service Server
