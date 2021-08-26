@@ -44,7 +44,7 @@ $output = New-Object Collections.Generic.List[System.Object]
 foreach($client in $clients)
 {
     $report = $reports[$($client.Id)]
-    if($report -eq $null)
+    if($null -eq $report)
     {
         continue
     }
