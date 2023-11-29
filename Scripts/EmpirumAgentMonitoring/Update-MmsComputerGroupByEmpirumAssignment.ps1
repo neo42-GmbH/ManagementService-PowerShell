@@ -54,6 +54,15 @@ Param (
 
 $csUrl = "$ServerName/api/criteriastorev3"
 
+# Testing for required Module
+if ($null -eq (Get-Command -Name Invoke-Sqlcmd)) {
+	Write-Warning "
+SqlServer Module not available. To install the SqlServer Module run the following command:`n
+Install-Module SqlServer"
+	Start-Sleep 10
+	exit 1
+}
+
 # Setup header
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("X-Neo42-Auth", "Admin")
@@ -70,6 +79,7 @@ foreach ($filter in $filterList) {
 		break
 	}
 }
+
 
 if ($null -eq $targetFilter) {
 	Write-Error "No filter found with name '$FilterName'"
