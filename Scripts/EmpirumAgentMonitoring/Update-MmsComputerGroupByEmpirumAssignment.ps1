@@ -1,4 +1,4 @@
-﻿#Requires -Version 4
+﻿#requires -Version 5
 #+Requires -Modules SqlServer
 <#
 .SYNOPSIS
@@ -20,7 +20,7 @@
 .COMPONENT
     neo42 Management Service 
 .EXAMPLE
-    .\Update-MmsComputerGroupByEmpirumAssignment.ps1
+    .\Update-MmsComputerGroupByEmpirumAssignment.ps1 
 #>
 
 # Fill with current servername

@@ -25,6 +25,7 @@
 .EXAMPLE
 	.\Export-DriveMonitoringReportByClient.ps1 -ServerName "https://server.domain:4242" -Domain "domain" -ClientName "client"
 #>
+[CmdletBinding()]
 Param (
     [parameter(Mandatory = $true)]
     [String]

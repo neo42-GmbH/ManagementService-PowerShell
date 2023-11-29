@@ -18,8 +18,9 @@
 	Creation Date:  29.11.2023
 	Purpose/Change: Align with new api and coding standards
 .EXAMPLE
-	.\Export-EmpirumAgentMonitoringReports.ps1
+	.\Export-EmpirumAgentMonitoringReports.ps1 -ServerName "https://server.domain:4242"
 #>
+[CmdletBinding()]
 Param (
 	[parameter(Mandatory = $true)]
 	[String]
@@ -32,7 +33,7 @@ Param (
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath -ChildPath "EmpirumAgentMonitoringReports.csv"
 
-$clientUrl = "$ServerName/api/client"
+$clientUrl = "$ServerName/api/Client"
 $empirumReportUrl = "$ServerName/api/EmpirumMonitoringReportV2"
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"

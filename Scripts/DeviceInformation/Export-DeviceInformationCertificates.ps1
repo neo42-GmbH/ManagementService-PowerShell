@@ -22,7 +22,7 @@
 .EXAMPLE
 	.\Export-DeviceInformationCertificates.ps1 -ServerName "https://server.domain:4242"
 #>
-
+[CmdletBinding()]
 Param (
 	[Parameter(Mandatory = $true)]
 	[string]

@@ -21,7 +21,7 @@
 .EXAMPLE
 	.\List-LocalAdministrators.ps1
 #>
-
+[CmdletBinding()]
 Param (
 	[Parameter(Mandatory = $true)]
 	[string]

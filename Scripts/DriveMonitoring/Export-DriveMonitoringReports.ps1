@@ -19,8 +19,9 @@
 	Purpose/Change: Align with new api and coding standards
 
 .EXAMPLE
-	.\Export-DriveMonitoringReports.ps1
+	.\Export-DriveMonitoringReports.ps1 -ServerName "https://server.domain:4242"
 #>
+[CmdletBinding()]
 Param (
 	[parameter(Mandatory = $true)]
 	[String]

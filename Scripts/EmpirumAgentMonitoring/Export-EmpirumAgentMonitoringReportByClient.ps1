@@ -18,8 +18,9 @@
 	Creation Date:	29.11.2023
 	Purpose/Change:	Align with new api and coding standards
 .EXAMPLE
-	.\Export-EmpirumAgentMonitoringReportByClient.ps1 -Domain corp -ClientName client
+	.\Export-EmpirumAgentMonitoringReportByClient.ps1 -ServerName "https://server.domain:4242" -Domain corp -ClientName client
 #>
+[CmdletBinding()]
 Param (
 	[parameter(Mandatory = $true)]
 	[String]
@@ -53,7 +54,7 @@ if ($null -eq $client) {
 
 $report = Invoke-RestMethod -Method Get -Uri $empirumReportUrl.Replace("{CLIENTID}", "$($client.Id)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
 $output = New-Object Collections.Generic.List[System.Object]
-if ($null -eq $report) {
+if (($null -eq $report) -or ($null -eq $report.Report)) {
 	Write-Warning "No empirum report found for $($Domain)\$($ClientName)"
 	Exit 1
 }
