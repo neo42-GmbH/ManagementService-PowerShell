@@ -31,10 +31,10 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = "$OutputPath\DriveMonitoringReports.csv"
+$filePath = Join-Path -Path $OutputPath -ChildPath "DriveMonitoringReports.csv"
 
 $clientUrl = "$ServerName/api/client"
-$driveMonitoringReportUrl = "$ServerName/api/drivemonitoringreport"
+$driveMonitoringReportUrl = "$ServerName/api/DriveMonitoringReport"
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("X-Neo42-Auth", "Admin")

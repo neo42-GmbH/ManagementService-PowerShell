@@ -46,7 +46,7 @@ Param (
 $filePath = Join-Path -Path $OutputPath -ChildPath "DriveMonitoringReport.csv"
 
 $clientByNameUrl = "$ServerName/api/client/$Domain/$ClientName"
-$driveMonitoringReportUrl = "$ServerName/api/drivemonitoringreport/{CLIENTID}"
+$driveMonitoringReportUrl = "$ServerName/api/DriveMonitoringReport/{CLIENTID}"
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("X-Neo42-Auth", "Admin")
@@ -55,14 +55,14 @@ $client = Invoke-RestMethod -Method Get -Uri $clientByNameUrl -Headers $headers 
 
 if ($null -eq $client) {
     Write-Warning "No client found for $($Domain)\$($ClientName)"
-    Exit
+    Exit 1
 }
 
 $report = Invoke-RestMethod -Method Get -Uri $driveMonitoringReportUrl.Replace("{CLIENTID}", "$($client.Id)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
 $output = New-Object Collections.Generic.List[System.Object]
 if ($null -eq $report) {
     Write-Warning "No drive monitoring report found for $($Domain)\$($ClientName)"
-    Exit
+    Exit 1
 }
 
 $belowThreshold = $true
