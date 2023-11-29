@@ -1,41 +1,42 @@
-﻿#requires -version 4
+﻿#requires -version 5
 <#
 .SYNOPSIS
-    Tests the connection to the Management Service Server
+	Tests the connection to the Management Service Server
 .DESCRIPTION
-    If this scripts returns the current server time, then the following criterias are fulfilled:
-        - The servername and the port are correct
-        - The webserver port is not blocked by any firewall
-        - The servername is a valid DNS name
-        - The client trusts the webserver certificate 
-        - The webserver is started
-.INPUTS
-    none
+	If this scripts returns the current server time, then the following criterias are fulfilled:
+		- The servername and the port are correct
+		- The webserver port is not blocked by any firewall
+		- The servername is a valid DNS name
+		- The client trusts the webserver certificate 
+		- The webserver is started
+.PARAMETER ServerName
+	The servername of the neo42 Management Service.
 .OUTPUTS
-    none
+	none
 .NOTES
-    Version:        1.0
-    Author:         neo42 GmbH
-    Creation Date:  27.01.2020
-    Purpose/Change: Initial version
-  
+	Version:		1.1
+	Author:			neo42 GmbH
+	Creation Date:	29.11.2023
+	Purpose/Change:	Align with new api and coding standards
+
 .EXAMPLE
-    .\Test-MMSServerConnection.ps1
+	.\Test-MMSServerConnection.ps1 -ServerName "https://server.domain:4242"
 #>
+[CmdletBinding()]
+Param (
+	[parameter(Mandatory = $true)]
+	[String]
+	$ServerName
+)
 
-# Fill with current servername
-$servername='https://server.domain:443'
+try {
+	$url = "$ServerName/api/TimeService/1"
+	$web = New-Object System.Net.WebClient
+	$web.UseDefaultCredentials = $true
+	$web.Headers.Add('X-Neo42-Auth', 'Anonymous')
 
-try
-{
-    $url = "$servername/api/TimeService/1"
-    $web = New-Object System.Net.WebClient
-    $web.UseDefaultCredentials = $true
-    $web.Headers.Add('X-Neo42-Auth','Anonymous')
-
-    $web.DownloadString($url)
+	$web.DownloadString($url)
 }
-catch
-{
-    $error[0] 
+catch {
+	$error[0]
 }
