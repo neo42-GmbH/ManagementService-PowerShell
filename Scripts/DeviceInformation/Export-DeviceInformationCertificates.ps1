@@ -32,8 +32,6 @@ Param (
 	$OutputPath = "$PSScriptRoot"
 )
 
-Write-Host $OutputPath
-
 $clientUrl = "$ServerName/api/Client"
 $deviceInformationCertReportUrl = "$ServerName/api/DeviceInformationV2?type=cert"
 
