@@ -60,22 +60,29 @@ $Compliancestates[2] = "Compliant"
 
 $out = $clients | Select-Object Id, name, @{
 	Label      = "ComplianceState"
-	Expression = { $Compliancestates[$BitlockerReportCollection[$_.id].ComplianceState] }
+	Expression = {
+		$Compliancestates[$BitlockerReportCollection[$_.id].ComplianceState]
+	}
 }, @{
 	Label      = "CurrentConfiguration"
-	Expression = { $BitlockerReportCollection[$_.id].CurrentConfigurationInfo.name }
+	Expression = {
+		$BitlockerReportCollection[$_.id].CurrentConfigurationInfo.name
+	}
 }, @{
 	Label      = "TargetConfiguration"
-	Expression = { $BitlockerReportCollection[$_.id].TargetConfigurationInfo.name }
+	Expression = {
+		$BitlockerReportCollection[$_.id].TargetConfigurationInfo.name
+	}
 }, @{
 	Label      = "EncryptionPercentage"
-	Expression = { $BitlockerReportCollection[$_.id].EncryptionPercentage }
+	Expression = {
+		$BitlockerReportCollection[$_.id].EncryptionPercentage
+	}
 }
 
 $compliant = $out | Where-Object ComplianceState -eq $Compliancestates[2] | Where-Object EncryptionPercentage -eq 100
 
 $encryptionMatch = New-Object "System.Collections.Generic.Dictionary[[System.Int32],[System.Int32]]"
-
 
 enum BitlockerWin10Algorithm {
 	AES_128 = 0
