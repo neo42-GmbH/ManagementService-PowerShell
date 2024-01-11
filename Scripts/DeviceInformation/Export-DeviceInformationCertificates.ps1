@@ -1,4 +1,4 @@
-﻿#requires -version 5
+#requires -version 5
 <#
 .SYNOPSIS
 	Exports all certificate information from the Device Information plug-in
