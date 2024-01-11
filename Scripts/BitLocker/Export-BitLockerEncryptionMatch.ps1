@@ -72,7 +72,6 @@ $out = $clients | Select-Object Id, name, @{
 	Expression = { $BitlockerReportCollection[$_.id].EncryptionPercentage }
 }
 
-
 $compliant = $out | Where-Object ComplianceState -eq $Compliancestates[2] | Where-Object EncryptionPercentage -eq 100
 
 $encryptionMatch = New-Object "System.Collections.Generic.Dictionary[[System.Int32],[System.Int32]]"
