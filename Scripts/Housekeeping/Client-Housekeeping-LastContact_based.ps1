@@ -37,7 +37,7 @@ $clients = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefault
 
 foreach ($client in $clients) {
 	if ([DateTime]$client.LastAccess -lt ((Get-Date).AddDays(-$RemoveAfterDays))) {
-		$deleteurl = "$url/$($client.Id)"
+		$deleteurl = "$ServerName/api/ServiceInfrastructureV3/$($client.Id)"
 		Invoke-RestMethod -Method Delete -Uri $deleteurl -Headers $headers -UseDefaultCredentials
 		Start-Sleep -Seconds 1
 	}
