@@ -1,70 +1,72 @@
-﻿#Requires -Version 4
+﻿#Requires -Version 5
 <#
 .SYNOPSIS
-    Export neo42 Management Service BitlockerReports
+	Export neo42 Management Service BitlockerReports
 .DESCRIPTION
-    An Example to show how to interact with the neo42 Management Service Api
-    to export values from Bitlocker Reports to csv.
-.INPUTS
-    none
+	An Example to show how to interact with the neo42 Management Service Api
+	to export values from Bitlocker Reports to csv.
+.PARAMETER ServerName
+	The servername of the neo42 Management Service.
+.PARAMETER OutputPath
+	The path where the csv files should be stored.
+	Defaults to the script root.
 .OUTPUTS
-    none
+	none
 .NOTES
-    Version:        1.0
-    Author:         neo42 GmbH
-    Creation Date:  26.05.2021
-    Purpose/Change: Initial version
-  
+	Version:		1.1
+	Author:			neo42 GmbH
+	Creation Date:	30.11.2023
+	Purpose/Change:	Align with new api and coding standards
 .EXAMPLE
-    ./Export-BitlockerReports.ps1
+	./Export-BitlockerReports.ps1 -ServerName "https://server.domain:4242"
 #>
+[CmdletBinding()]
+Param (
+	[Parameter(Mandatory = $true)]
+	[string]
+	$ServerName,
+	[Parameter(Mandatory = $false)]
+	[string]
+	$OutputPath = "$PSScriptRoot"
+)
 
-# Fill with current servername
-$servername='https://server.domain:443'
 # Filename with the collected data
-$filename = "$($PSScriptRoot)\BitlockerReports.csv"
+$filePath = Join-Path -Path $OutputPath -ChildPath "BitlockerReports.csv"
 
 # prepare request headers
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("X-Neo42-Auth", "Admin")
-$headersv3=New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headersv3.Add("X-Neo42-Auth", "Admin")
-$headersv3.Add("X-Neo42-ControllerVersion", "3")
 
 # Get Clientlist from MMS Server
-$url = "$servername/api/client"
+$clientUrl = "$ServerName/api/Client"
+$bitlockerReportUrl = "$ServerName/api/BitlockerReportV4"
 
-$clients = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefaultCredentials
-$clientcollection=New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
-foreach($client in $clients){
-    $clientcollection.Add($client.Id, $client)
-}
+$clients = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
 
 #  Append this URL with /[ClientID] to get only the specified report
-$BitlockerReports = Invoke-WebRequest -Method Get -Uri "$servername/api/BitlockerReport/" -Headers $headersv3 -UseDefaultCredentials| Select-Object -ExpandProperty content| convertfrom-json
-$BitlockerReportCollection=New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
-foreach($BitlockerReport in $BitlockerReports){
-    $BitlockerReportCollection.Add($BitlockerReport.ClientID, $BitlockerReport)
+$BitlockerReports = Invoke-RestMethod -Method Get -Uri "$bitlockerReportUrl" -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$BitlockerReportCollection = New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
+foreach ($BitlockerReport in $BitlockerReports) {
+	$BitlockerReportCollection.Add($BitlockerReport.ClientID, $BitlockerReport)
 }
-
 
 $Compliancestates = New-Object "System.Collections.Generic.Dictionary[[Int],[String]]"
-$Compliancestates[0]="No Report"
-$Compliancestates[1]="Not Compliant"
-$Compliancestates[2]="Compliant"
+$Compliancestates[0] = "No Report"
+$Compliancestates[1] = "Not Compliant"
+$Compliancestates[2] = "Compliant"
 
-$out=$clients|Select-Object Id,name,@{
-    Label="ComplianceState"
-    Expression = {$Compliancestates[$BitlockerReportCollection[$_.id].ComplianceState]}
-},@{
-    Label="CurrentConfiguration"
-    Expression = {$BitlockerReportCollection[$_.id].CurrentConfigurationInfo.name}
-},@{
-    Label="TargetConfiguration"
-    Expression = {$BitlockerReportCollection[$_.id].TargetConfigurationInfo.name}
-},@{
-    Label="EncryptionPercentage"
-    Expression = {$BitlockerReportCollection[$_.id].EncryptionPercentage}
+$out = $clients | Select-Object Id, name, @{
+	Label      = "ComplianceState"
+	Expression = { $Compliancestates[$BitlockerReportCollection[$_.id].ComplianceState] }
+}, @{
+	Label      = "CurrentConfiguration"
+	Expression = { $BitlockerReportCollection[$_.id].CurrentConfigurationInfo.name }
+}, @{
+	Label      = "TargetConfiguration"
+	Expression = { $BitlockerReportCollection[$_.id].TargetConfigurationInfo.name }
+}, @{
+	Label      = "EncryptionPercentage"
+	Expression = { $BitlockerReportCollection[$_.id].EncryptionPercentage }
 }
 
-$out|Export-Csv -Encoding UTF8 -Path $filename -NoTypeInformation
+$out | Export-Csv -Encoding UTF8 -Path $filePath -NoTypeInformation
