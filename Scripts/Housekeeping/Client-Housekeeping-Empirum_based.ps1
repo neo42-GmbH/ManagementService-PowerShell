@@ -75,7 +75,7 @@ foreach ($client in $clients) {
 		($empclients -notcontains "$($client.domain)\$($client.name)") -and 
 		($ClientsToKeep -notcontains $client.Name)
 	) {
-		$deleteurl = "$url/$($client.Id)"
+		$deleteurl = "$ServerName/api/ServiceInfrastructureV3/$($client.Id)"
 		Write-Output "Removing Client $($client.domain)\$($client.name)"
 		Invoke-RestMethod -Method Delete -Uri $deleteurl -Headers $headers -UseDefaultCredentials
 	}

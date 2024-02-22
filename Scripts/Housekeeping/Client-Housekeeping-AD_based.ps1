@@ -57,7 +57,7 @@ foreach ($client in $clients) {
 	#Remove Entries that cannot be found in AD, keep Clients listed on the blacklist $ClientsToKeep
 	$CompObj = Get-Adcomputer -Filter "Name -eq `"$($client.Name)`"" -ErrorAction SilentlyContinue
 	if (($null -eq $CompObj) -and ($ClientsToKeep -notcontains $client.Name)) {
-		$deleteurl = "$url/$($client.Id)"
+		$deleteurl = "$ServerName/api/ServiceInfrastructureV3/$($client.Id)"
 		Write-Verbose "Removing Client $($Client.Name)"
 		Invoke-RestMethod -Method Delete -Uri $deleteurl -Headers $headers -UseDefaultCredentials
 		Start-Sleep -Seconds 1
