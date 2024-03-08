@@ -29,6 +29,11 @@ if ($service.Status -ne "Stopped") {
     Write-Error "Service Neo42MgmtSvc must be stopped."
     exit
 } 
+$mongoDBProcess = Get-Process -Name "mongod" -ErrorAction SilentlyContinue
+if ($null -ne $mongoDBProcess) {
+    Write-Error "MongoDB process is still running. Please stop the process before changing the data directory."
+    exit
+}
 
 $servicePathName = [string]::Empty
 
