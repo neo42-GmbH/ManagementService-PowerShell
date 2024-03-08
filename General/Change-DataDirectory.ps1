@@ -1,4 +1,5 @@
 #requires -version 5.1
+#requires -RunAsAdministrator
 <#
 .SYNOPSIS
     Changes the data directory for the Server and all Microservices
