@@ -31,13 +31,8 @@ if ($service.Status -ne "Stopped") {
 } 
 
 $servicePathName = [string]::Empty
-try {
-    $servicePathName = (Get-WmiObject win32_service | Where-Object { $_.Name -like $serviceName } | Select-Object PathName).PathName.Replace("""", "")
-}
-catch {
-    $servicePathName = (get-ciminstance win32_service | Where-Object { $_.Name -like $serviceName } | Select-Object PathName).PathName.Replace("""", "")
-}
 
+$servicePathName = (Get-CimInstance win32_service | Where-Object { $_.Name -like $serviceName } | Select-Object PathName).PathName.Replace("""", "")
 $appConfigDllPath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($servicePathName), "plugins\Neo42.WebService.PlugIn\Neo42.WebService.PlugIn.dll")
 $appConfig = [System.Configuration.ConfigurationManager]::OpenExeConfiguration($appConfigDllPath)
 $oldPath = [System.Environment]::ExpandEnvironmentVariables($appConfig.AppSettings.Settings["ApplicationBaseDirectory"].Value)
@@ -110,5 +105,10 @@ finally {
         Write-Host "Data successfully migrated."
         $appConfig.AppSettings.Settings["ApplicationBaseDirectory"].Value = $newPath
         $appConfig.Save()
+
+        (Get-Content -Raw -Path ([System.IO.Path]::Combine($newPath, "MongoDb\mongod.cfg"))) `
+            -replace "(?<=path:)\s*$([Regex]::Escape($oldPath))(?=\\MongoDb\\logs\\mongod\.log)", " $newPath" `
+            -replace "(?<=dbPath:)\s*$([Regex]::Escape($oldPath))(?=\\MongoDb\\data\\db\\V5)", " $newPath" |
+            Set-Content -Path ([System.IO.Path]::Combine($newPath, "MongoDb\mongod.cfg"))
     }
 }
