@@ -3,9 +3,9 @@
 	Merge provided files, folders or logos to the PSADT package
 .DESCRIPTION
 	Script to copy files, folders or logos to neo42 PSADT package
-.PARAMETER $PackagePath
+.PARAMETER PackagePath
 	The PackagePath of the neo42 APC PSADT working directory  
-.PARAMETER $GlobalGeneralDirectory	
+.PARAMETER GlobalGeneralDirectory	
 	The directory where package assets are stored. Example <Global.GeneralDirectory> = C:\neo42\General
 	Please create this pipeline variable in APC menu 'Configuration / Pipelinevariable'
 .OUTPUTS
