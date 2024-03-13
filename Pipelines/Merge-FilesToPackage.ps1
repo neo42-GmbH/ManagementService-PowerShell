@@ -41,7 +41,7 @@ $packageName = "$($packageconfig.AppVendor) $($packageconfig.AppName)"
 $appDeployToolkit = Join-Path $customFiles "$packageName\AppDeployToolkit\"
 $files = Join-Path $customFiles "$packageName\Files\"
 $supportFiles = Join-Path $customFiles "$packageName\SupportFiles\"
-$userSupportFiles = Join-Path $customFiles "$packageName\SupportFiles\User"
+$userSupportFiles = Join-Path $customFiles "$packageName\SupportFiles\User\"
 
 # Create directories when directories not exists
 $checkExistDirectory = @($customFiles, $directoryLogos, $appDeployToolkit, $files, $supportFiles, $userSupportFiles)
@@ -58,5 +58,5 @@ foreach ($directory in $checkExistDirectory) {
 Copy-Item -Path $logos -Recurse -Destination $appDeployToolkit -Force
 
 # Copy provided files or folders to the PSADT package
-$copyExistDirectoryFiles = @($appDeployToolkit, $files, $supportFiles, $userSupportFiles)
+$copyExistDirectoryFiles = @($appDeployToolkit, $files, $supportFiles)
 Copy-Item -Path $copyExistDirectoryFiles -Recurse -Destination $PackagePath -Force
