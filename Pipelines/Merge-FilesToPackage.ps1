@@ -45,7 +45,7 @@ $userSupportFiles = Join-Path $customFiles "$packageName\SupportFiles\User"
 
 # Create directories when directories not exists
 $checkExistDirectory = @($customFiles, $directoryLogos, $appDeployToolkit, $files, $supportFiles, $userSupportFiles)
-foreach ($directory in $CheckExistDirectory) {
+foreach ($directory in $checkExistDirectory) {
 	if ($false -eq (Test-Path -Path $directory)) {
 		New-Item -Path $directory -ItemType Directory
 	}
