@@ -1,5 +1,4 @@
 <#
-
 .SYNOPSIS
 	Merge provided files, folders or logos to the PSADT package
 .DESCRIPTION
@@ -7,62 +6,57 @@
 .PARAMETER $PackagePath
 	The PackagePath of the neo42 APC PSADT working directory  
 .PARAMETER $GlobalGeneralDirectory	
-	The General directory of the neo42 directory
+	The directory where package assets are stored. Example <Global.GeneralDirectory> = C:\neo42\General
+	Please create this pipeline variable in APC menu 'Configuration / Pipelinevariable'
 .OUTPUTS
 	none
 .NOTES
 	Author:					alf.palmroth@neo42.de
-	Creation Date:			08.03.2004
-	Required MMS Server:	4.0.16
-
+	Creation Date:			08.03.2024
+	Tested on:				MMS Server 4.0.16
 #>
 
 [CmdletBinding()]
 Param (
-	[parameter(Mandatory = $true)]
-	[String]
+	[Parameter(Mandatory = $true)]
+	[ValidateScript({$true -eq $_.Exists})]
+	[System.IO.DirectoryInfo]
 	$PackagePath,
-	[parameter(Mandatory = $true)]
-	[String]
+	[Parameter(Mandatory = $true)]
+	[ValidateScript({$true -eq [System.IO.Path]::IsPathRooted($_.FullName)})]
+	[System.IO.DirectoryInfo]
 	$GlobalGeneralDirectory		
 )
 
-## Please create global Pipelinevariable <Global.GeneralDirectory> in APC menu Configuration / Pipelinevariable
-## Example <Global.GeneralDirectory> Value = C:\neo42\General
-
 # Set path variables
-$CustomFiles = "$GlobalGeneralDirectory\CustomFiles\"
-$DirectoryLogos = "$GlobalGeneralDirectory\Logos\"
-$Logos = "$GlobalGeneralDirectory\Logos\*.png"
+$customFiles = "$GlobalGeneralDirectory\CustomFiles\"
+$directoryLogos = "$GlobalGeneralDirectory\Logos\"
+$logos = "$GlobalGeneralDirectory\Logos\*.png"
 
-# PackageName determination from neo42PackageConfig.json #
-$PackageConfig=Get-Content -Raw "$PackagePath\neo42PackageConfig.json" |ConvertFrom-Json
-$PackageName = "$($packageconfig.AppVendor) $($packageconfig.AppName)"
+# PackageName determination from neo42PackageConfig.json
+$packageConfig = Get-Content -Raw "$PackagePath\neo42PackageConfig.json" | ConvertFrom-Json
+$packageName = "$($packageconfig.AppVendor) $($packageconfig.AppName)"
 
 # Set directory variables
-$AppDeployToolkit = "$CustomFiles\$PackageName\AppDeployToolkit\"
-$Files = "$CustomFiles\$PackageName\Files\"
-$SupportFiles = "$CustomFiles\$PackageName\SupportFiles\"
-$UserSupportFiles = "$CustomFiles\$PackageName\SupportFiles\User"
+$appDeployToolkit = Join-Path $customFiles "$packageName\AppDeployToolkit\"
+$files = Join-Path $customFiles "$packageName\Files\"
+$supportFiles = Join-Path $customFiles "$packageName\SupportFiles\"
+$userSupportFiles = Join-Path $customFiles "$packageName\SupportFiles\User"
 
 # Create directories when directories not exists
-$CheckExistDirectory = @($CustomFiles, $DirectoryLogos, $AppDeployToolkit, $Files, $SupportFiles, $UserSupportFiles)
-
-foreach ($directory in $CheckExistDirectory){
-	if (!(Test-Path -Path $directory)){
+$checkExistDirectory = @($customFiles, $directoryLogos, $appDeployToolkit, $files, $supportFiles, $userSupportFiles)
+foreach ($directory in $CheckExistDirectory) {
+	if ($false -eq (Test-Path -Path $directory)) {
 		New-Item -Path $directory -ItemType Directory
 	}
-
+	elseif ($false -eq (Test-Path -Path $directory -PathType Container)) {
+		throw "The path '$directory' exists but is not a directory"
+	}
 }
 
-# Copy custom CI logos to PSADT Package AppDeployToolkit directory
-Copy-Item -Path $Logos -Recurse -Destination $AppDeployToolkit -Force
+# Copy custom CI logos to PSADT package AppDeployToolkit directory
+Copy-Item -Path $logos -Recurse -Destination $appDeployToolkit -Force
 
 # Copy provided files or folders to the PSADT package
-$CopyExistDirectoryFiles = @($AppDeployToolkit, $Files, $SupportFiles, $UserSupportFiles)
-
-foreach ($directoryfiles in $CopyExistDirectoryFiles){
-	Copy-Item -Path $CopyExistDirectoryFiles -Recurse -Destination $PackagePath -Force
-}
-
-
+$copyExistDirectoryFiles = @($appDeployToolkit, $files, $supportFiles, $userSupportFiles)
+Copy-Item -Path $copyExistDirectoryFiles -Recurse -Destination $PackagePath -Force
