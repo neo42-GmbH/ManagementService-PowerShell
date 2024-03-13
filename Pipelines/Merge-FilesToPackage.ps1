@@ -6,7 +6,7 @@
 .PARAMETER PackagePath
 	The PackagePath of the neo42 APC PSADT working directory  
 .PARAMETER GlobalGeneralDirectory	
-	The directory where package assets are stored. Example <Global.GeneralDirectory> = C:\neo42\General
+	The directory where package assets are stored. Example Global.GeneralDirectory = C:\neo42\General
 	Please create this pipeline variable in APC menu 'Configuration / Pipelinevariable'
 .OUTPUTS
 	none
@@ -34,7 +34,7 @@ $directoryLogos = "$GlobalGeneralDirectory\Logos\"
 $logos = "$GlobalGeneralDirectory\Logos\*.png"
 
 # PackageName determination from neo42PackageConfig.json
-$packageConfig = Get-Content -Raw "$PackagePath\neo42PackageConfig.json" | ConvertFrom-Json
+$packageConfig = Get-Content -Raw "$PackagePath\neo42PackageConfig.json" -ErrorAction Stop | ConvertFrom-Json
 $packageName = "$($packageconfig.AppVendor) $($packageconfig.AppName)"
 
 # Set directory variables
