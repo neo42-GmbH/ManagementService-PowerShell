@@ -1,13 +1,13 @@
 # Pipeline Tasks
 
 ## Merge-FilesToPackage.ps1
-### Synopsis
-Merge provided files, folders or logos to the PSADT package
+### Zusammenfassung
+Erlaubt es benutzerdefinierte Dateien dem PSADT Paket hinzuzufügen
 ### Dokumentation
-[Available as PDF](Pipelines/Merge-FilesToPackage.pdf)
+[Verfügbar als PDF](Pipelines/Merge-FilesToPackage.pdf)
 
 ## Add-ContentToCustomFunction.ps1
-### Synopsis
-Add content to a custom function.
+### Zusammenfassung
+Erlaubt das Hinzufügen von Code zu den Custom Funktionen in der Deploy-Application.ps1
 ### Dokumentation
-[Available as PDF](Pipelines/Add-ContentToCustomFunction.pdf)
+[Verfügbar als PDF](Pipelines/Add-ContentToCustomFunction.pdf)
