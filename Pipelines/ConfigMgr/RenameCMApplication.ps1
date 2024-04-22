@@ -35,7 +35,7 @@ param(
     $SiteCode,
     [Parameter()]
     [switch]
-    $SubProcess = $false
+    $SubProcess
 )
 [string]$scriptName = Split-Path -Path $MyInvocation.MyCommand.Path -Leaf
 if ($false -eq $SubProcess){
