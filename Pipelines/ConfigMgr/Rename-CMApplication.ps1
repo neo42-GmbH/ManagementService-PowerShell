@@ -1,12 +1,12 @@
 ﻿<#
 .SYNOPSIS
-    Renames an Application in ConfigMgr
+    Renames an application in ConfigMgr
 .DESCRIPTION
-    Renames an Application in ConfigMgr
+    Renames an application in ConfigMgr
 .PARAMETER NewName
-    The new name of the Application
+    The new name of the application
 .PARAMETER CI_UniqueID
-    The CI_UniqueID of the Application to rename
+    The CI_UniqueID of the application to rename
     Format: ScopeID:ApplicationID:Revision
 .PARAMETER SiteServer
     The SiteServer of the ConfigMgr Site
@@ -15,12 +15,12 @@
 .PARAMETER SubProcess
     Internal parameter to run the script as a subprocess
 .EXAMPLE
-    RenameCMApplication.ps1 -NewName "New Name" -CI_UniqueID "ScopeID:ApplicationID:Revision" -SiteServer "SiteServer" -SiteCode "SiteCode"
+    Rename-CMApplication.ps1 -NewName "New Name" -CI_UniqueID "ScopeID:ApplicationID:Revision" -SiteServer "SiteServer" -SiteCode "SiteCode"
 .EXAMPLE
     APC specific example
     -NewName "Prefix_<Run.Developer> <Run.Product> <Run.Version>" -CI_UniqueID "<Run.ConfigMgrApplicationUniqueId>" -SiteServer "<Global.SiteServer>" -SiteCode "<Global.SiteCode>"
 #>
-param(
+Param(
     [Parameter(Mandatory=$true)]
     [string]
     $NewName,
@@ -33,17 +33,17 @@ param(
     [Parameter(Mandatory=$true)]
     [string]
     $SiteCode,
-    [Parameter()]
+    [Parameter(Mandatory=$false)]
     [switch]
     $SubProcess
 )
 [string]$scriptName = Split-Path -Path $MyInvocation.MyCommand.Path -Leaf
-if ($false -eq $SubProcess){
+if ($false -eq $SubProcess) {
     [string]$scriptPath = $MyInvocation.MyCommand.Definition
     [string]$arguments = ForEach ($PSBoundParameter in $PsBoundParameters.GetEnumerator()){
         [string]$key = $PSBoundParameter.Key;
         [string]$value = $PSBoundParameter.Value;
-        " -$Key `"$Value`""
+        Write-Output " -$Key `"$Value`""
     }
     [string]$commandArguments = "-NoProfile"+" -ExecutionPolicy"+" Bypass"+" -File"+" `"$scriptPath`""+" -Subprocess"+$arguments
     [System.Diagnostics.Process]$process = Start-Process powershell.exe -PassThru -wait -ArgumentList $commandArguments
@@ -55,10 +55,10 @@ if ($false -eq $SubProcess){
     exit 0
 }
 [string]$modelName = "$(($CI_UniqueID -split ":")[0])/$(($CI_UniqueID -split ":")[1])"
-if($null -eq (Get-Module ConfigurationManager)) {
-    Import-Module "$($ENV:SMS_ADMIN_UI_PATH)\..\ConfigurationManager.psd1"
+if ($null -eq (Get-Module ConfigurationManager)) {
+    Import-Module -Name "$($ENV:SMS_ADMIN_UI_PATH)\..\ConfigurationManager.psd1"
 }
-if($null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
+if ($null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
     New-PSDrive -Name $SiteCode -PSProvider CMSite -Root $SiteServer
 }
 Set-Location "$($SiteCode):\"
