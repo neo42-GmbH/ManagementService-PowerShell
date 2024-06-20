@@ -1,7 +1,7 @@
 #requires -version 5
 <#
 .SYNOPSIS
-	Exports all certificate information from the Device Information plug-in
+	Exports all expired Notifications that were not received by the target.
 
 #>
 [CmdletBinding()]

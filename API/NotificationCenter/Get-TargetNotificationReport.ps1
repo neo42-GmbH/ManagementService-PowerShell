@@ -1,7 +1,7 @@
 #requires -version 5
 <#
 .SYNOPSIS
-	Exports the state of all notifications of target
+	Exports the state of all notifications of a specific target.
 
 #>
 [CmdletBinding()]

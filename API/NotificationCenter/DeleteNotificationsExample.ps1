@@ -1,3 +1,8 @@
+<#
+	.SYNOPSIS
+		Examplescript for the Management Service NotificationCenter Module
+		Deletes all Notifications for the specified Targets.
+#>
 [CmdletBinding()]
 param (
 	[Parameter(Mandatory = $true)]
