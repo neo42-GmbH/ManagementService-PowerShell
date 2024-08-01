@@ -141,6 +141,89 @@ function Get-MMSBridgeSettings {
         exit 1
     }
 }
+
+function Invoke-WithImpersonation {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [ScriptBlock]
+        $ScriptBlock,
+        [Parameter(Mandatory=$true)]
+        [PSCredential]
+        $Credential
+    )
+    
+    Add-Type -Namespace PInvoke -Name NativeMethods -MemberDefinition @'
+[DllImport("Advapi32.dll", EntryPoint = "ImpersonateLoggedOnUser", SetLastError = true)]
+private static extern bool NativeImpersonateLoggedOnUser(
+    SafeHandle hToken);
+
+public static void ImpersonateLoggedOnUser(SafeHandle token)
+{
+    if (!NativeImpersonateLoggedOnUser(token))
+    {
+        throw new System.ComponentModel.Win32Exception();
+    }
+}
+
+[DllImport("Advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+private static extern bool LogonUserW(
+    string lpszUsername,
+    string lpszDomain,
+    IntPtr lpszPassword,
+    UInt32 dwLogonType,
+    UInt32 dwLogonProvider,
+    out Microsoft.Win32.SafeHandles.SafeWaitHandle phToken);
+
+public static Microsoft.Win32.SafeHandles.SafeWaitHandle LogonUser(string username, string domain,
+    System.Security.SecureString password, uint logonType, uint logonProvider)
+{   
+    IntPtr passPtr = Marshal.SecureStringToGlobalAllocUnicode(password);
+    try
+    {
+        Microsoft.Win32.SafeHandles.SafeWaitHandle token;
+        if (!LogonUserW(username, domain, passPtr, logonType, logonProvider, out token))
+        {
+            throw new System.ComponentModel.Win32Exception();
+        }
+        
+        return token;
+    }
+    finally
+    {
+        Marshal.ZeroFreeGlobalAllocUnicode(passPtr);
+    }
+}
+
+[DllImport("Advapi32.dll")]
+public static extern bool RevertToSelf();
+'@
+
+    $user = $Credential.UserName
+    $domain = $null
+    if ($user.Contains('\')) {
+        $domain, $user = $user -split '\\', 2
+    }
+
+    try {
+        $token = [PInvoke.NativeMethods]::LogonUser($user, $domain, $Credential.Password, 4, 0)
+        [PInvoke.NativeMethods]::ImpersonateLoggedOnUser($token)
+        try {
+            . $ScriptBlock
+        }
+        finally {
+            $null = [PInvoke.NativeMethods]::RevertToSelf()
+        }
+    }
+    catch {
+        $PSCmdlet.WriteError($_)
+    }
+    finally {
+        if ($token) {
+            $token.Dispose()
+        }
+    }
+}
 #endregion
 
 #region PREREQUISITES
@@ -165,6 +248,9 @@ if ($true -eq $ConnectEmpirum) {
     if ($null -eq (Get-Module -Name "SqlServer" -ListAvailable)) {
         Write-Error "The [SqlServer] module is required for Empirum connection. Please install the module and try again."
         exit 1
+    }
+    else {
+        Import-Module -Name "SqlServer"
     }
 }
 if ($true -eq $ConnectIntune) {
@@ -348,8 +434,7 @@ if ($true -eq $ConnectConfigMgr) {
         }
         else {
             [System.Management.Automation.PSDriveInfo]$configMgrDrive = New-PSDrive -Name $configMgrSiteCode -PSProvider "CMSite" -Root $configMgrConnection.Server -Credential $configMgrCredential -ErrorAction Stop
-            Set-Location -Path "$($configMgrDrive.Name):\" -ErrorAction Stop
-            Write-Host "Successfully connected to ConfigMgr with server [$($configMgrConnection.Server)]. Drive is mapped to SiteCode [$configMgrSiteCode] and location has been updated."
+            Write-Host "Successfully connected to ConfigMgr with server [$($configMgrConnection.Server)]. Drive is mapped to SiteCode [${configMgrSiteCode}:]."
         }
         Remove-Variable -Name "configMgrConnection", "configMgrSiteCode", "configMgrDrive", "configMgrCredential"
     }
@@ -400,23 +485,19 @@ if ($true -eq $ConnectEmpirum) {
             if ($false -eq [string]::IsNullOrEmpty($empConnection.Domain)) {
                 $empConnection.User = $empConnection.Domain + '\' + $empConnection.User
             }
-            [securestring]$empConnectionPassword = ConvertTo-SecureString -AsPlainText -Force $empConnection.Password
-            $empConnectionPassword.MakeReadOnly()
-            [PSCredential]$empCredential = [PSCredential]::new($empConnection.User, $empConnectionPassword)
-            foreach ($sqlSrvCmndletName in (Get-Command -Module SQLServer -ParameterName Credential, ServerInstance).Name) {
-                $PSDefaultParameterValues["${sqlSrvCmndletName}:Credential"] = $empCredential
-                $PSDefaultParameterValues["${sqlSrvCmndletName}:ServerInstance"] = $empConnection.Server
-                $PSDefaultParameterValues["${sqlSrvCmndletName}:TrustServerCertificate"] = $true
-                $PSDefaultParameterValues["${sqlSrvCmndletName}:Database"] = $empConnection.Database
+            [PSCredential]$empCredential = [PSCredential]::new($empConnection.User, (ConvertTo-SecureString -AsPlainText -Force $empConnection.Password))
+            Invoke-WithImpersonation -Credential $empCredential -ScriptBlock { 
+                New-PSDrive -PSProvider "SqlServer" -Name "Empirum" -Root ("SQLSERVER:\SQL\" + $empConnection.Server + "\Databases\" + $empConnection.Database) -ErrorAction Stop -Scope Global | Out-Null
             }
-            Remove-Variable -Name "sqlSrvCmndletName"
+            
+            Write-Host "Successfully connected to Empirum database with server [$($empConnection.Server)] with database [$($empConnection.Database)]. SQL Server is mapped as PSDrive [Empirum:]."
         } 
         catch {
             Write-Error "Could not connect to Empirum database`n$($_.Exception.Message)"
             exit 1
         }
     }
-    Remove-Variable -Name "empConnection", "empConnectionPassword", "empCredential"
+    Remove-Variable -Name "empConnection", "empCredential"
 }
 #endregion
 
