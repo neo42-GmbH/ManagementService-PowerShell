@@ -37,45 +37,45 @@
         Switch to only get the data and store it in variables. No connections will be established.
         Useful if you want to use the data in your own way and not use the default modules.
 #>
-[CmdletBinding(DefaultParameterSetName="Certificate")]
+[CmdletBinding(DefaultParameterSetName = "Certificate")]
 Param (
-    [Parameter(Mandatory=$false)]
-    [ValidateScript({ Invoke-RestMethod -Uri ($_.AbsoluteUri + "api/TimeService/1") -Headers @{"X-Neo42-Auth" = "Anonymous"} -ErrorAction Stop })]
+    [Parameter(Mandatory = $false)]
+    [ValidateScript({ Invoke-RestMethod -Uri ($_.AbsoluteUri + "api/TimeService/1") -Headers @{"X-Neo42-Auth" = "Anonymous" } -ErrorAction Stop })]
     [uri]
     $MmsApiUri = ("https://" + [System.Net.Dns]::GetHostByName($env:computerName).HostName + ":4242"),
 
-    [Parameter(Mandatory=$false, ParameterSetName="Certificate")]
-    [ValidateScript({[System.Text.Encoding]::UTF8.GetByteCount($_) -eq 40})]
+    [Parameter(Mandatory = $false, ParameterSetName = "Certificate")]
+    [ValidateScript({ [System.Text.Encoding]::UTF8.GetByteCount($_) -eq 40 })]
     [string]
     $CertificateThumbprint,
-    [Parameter(Mandatory=$true, ParameterSetName="Credentials")]
+    [Parameter(Mandatory = $true, ParameterSetName = "Credentials")]
     [PSCredential]
     $Credentials,
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string]
     $TenantName = "Default",
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [string[]]
     $Mount,
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [switch]
     $ConnectConfigMgr,
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [switch]
     $ConnectEmpirum,
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [switch]
     $ConnectM42Cloud,
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [switch]
     $ConnectIntune,
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [switch]
     $ConnectWSO,
 
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false)]
     [switch]
     $GetDataOnly
 )
@@ -93,10 +93,10 @@ function Test-CertificateChain {
         Test-CertificateChain -IssuerCertificate $issuerCert -Certificate $cert
     #>
     Param (
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [System.Security.Cryptography.X509Certificates.X509Certificate2]
         $IssuerCertificate,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [System.Security.Cryptography.X509Certificates.X509Certificate2]
         $Certificate
     )
@@ -114,16 +114,16 @@ function Test-CertificateChain {
 
 function Get-MMSBridgeSettings {
     Param (
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [uri]
         $MmsApiUri = $script:MmsApiUri,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [PSCustomObject]
         $Tenant = $script:MMSTenant,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [hashtable]
         $MmsHeaders = $script:MmsHeaders,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [ValidateSet("Sccm", "Empirum", "EmpirumSDK", "Intune", "Wso")]
         [string]
         $ServiceName
@@ -161,7 +161,7 @@ if ($true -eq $ConnectM42Cloud) {
         exit 1
     }
 }
-if ($true -eq $ConnectEmpirum){
+if ($true -eq $ConnectEmpirum) {
     if ($null -eq (Get-Module -Name "SqlServer" -ListAvailable)) {
         Write-Error "The [SqlServer] module is required for Empirum connection. Please install the module and try again."
         exit 1
@@ -177,16 +177,16 @@ if ($true -eq $ConnectIntune) {
 
 #region AUTHENTICATION MMS
 [hashtable]$script:MmsHeaders = @{
-    "Accept" = "application/json"
+    "Accept"       = "application/json"
     "Content-Type" = "application/json"
 }
 if ($PSCmdlet.ParameterSetName -eq "Credentials") {
     Write-Host "Using credentials for authentication to the MMS API..."
     try {
         [PSCustomObject]$jwtResponse = Invoke-RestMethod -Method Post -Uri ($MmsApiUri.AbsoluteUri + "api/identity/jwt") -Headers $MmsHeaders -Body (@{
-            User     = $Credentials.UserName
-            Password = [System.Net.NetworkCredential]::new("", $Credentials.Password).Password
-        } | ConvertTo-Json) -ErrorAction Stop
+                User     = $Credentials.UserName
+                Password = [System.Net.NetworkCredential]::new("", $Credentials.Password).Password
+            } | ConvertTo-Json) -ErrorAction Stop
         if ($true -eq [string]::IsNullOrEmpty($response.Token)) {
             throw "Failed to get bearer token. Reply did not contain a token."
         }
@@ -202,7 +202,7 @@ elseif ($PSCmdlet.ParameterSetName -eq "Certificate") {
 
     # Obtain the MMS Root Certificate from the MMS API
     try {
-        [string]$MMSRootCertificatePEM = Invoke-RestMethod -Uri ($MmsApiUri.AbsoluteUri + "api/certificateservices/servercert") -Method GET -Headers @{"X-Neo42-Auth" = "Anonymous"; "Accept" = "application/json"} -ErrorAction Stop | Select-Object -ExpandProperty PemEncodedObject
+        [string]$MMSRootCertificatePEM = Invoke-RestMethod -Uri ($MmsApiUri.AbsoluteUri + "api/certificateservices/servercert") -Method GET -Headers @{"X-Neo42-Auth" = "Anonymous"; "Accept" = "application/json" } -ErrorAction Stop | Select-Object -ExpandProperty PemEncodedObject
         [System.Security.Cryptography.X509Certificates.X509Certificate2]$MMSRootCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new([Convert]::FromBase64String($MMSRootCertificatePEM.Trim("`r").Split("`n")[1..17] -join [string]::Empty))
         Remove-Variable -Name "MMSRootCertificatePEM"
     }
@@ -338,7 +338,7 @@ if ($true -eq $ConnectConfigMgr) {
     try {
         [PSCredential]$configMgrCredential = [PSCredential]::new(($configMgrConnection.Domain + '\' + $configMgrConnection.User), (ConvertTo-SecureString -AsPlainText -Force $configMgrConnection.Password))
         [CimSession]$session = New-CimSession -ComputerName $configMgrConnection.Server -Credential $configMgrCredential -ErrorAction Stop
-        [string]$configMgrSiteCode = (Get-CimInstance -CimSession $session -Namespace "root\sms" -Class "__Namespace").Name.Substring(5,3)
+        [string]$configMgrSiteCode = (Get-CimInstance -CimSession $session -Namespace "root\sms" -Class "__Namespace").Name.Substring(5, 3)
         Remove-CimSession -CimSession $session | Out-Null
         Remove-Variable -Name "session"
         if ($true -eq $GetDataOnly) {
@@ -397,7 +397,7 @@ if ($true -eq $ConnectEmpirum) {
     }
     else {
         try {
-            if ($false -eq [string]::IsNullOrEmpty($empConnection.Domain)){
+            if ($false -eq [string]::IsNullOrEmpty($empConnection.Domain)) {
                 $empConnection.User = $empConnection.Domain + '\' + $empConnection.User
             }
             [securestring]$empConnectionPassword = ConvertTo-SecureString -AsPlainText -Force $empConnection.Password
