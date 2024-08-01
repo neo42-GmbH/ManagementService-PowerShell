@@ -182,13 +182,11 @@ if ($true -eq $ConnectIntune) {
 }
 if ($PSCmdlet.ParameterSetName -eq "Credentials") {
     Write-Host "Using credentials for authentication to the MMS API..."
-    [hashtable]$body = @{
-        User     = $Credentials.UserName
-        Password = [System.Net.NetworkCredential]::new("", $Credentials.Password).Password
-    }
-
     try {
-        [PSCustomObject]$jwtResponse = Invoke-RestMethod -Method Post -Uri ($MmsApiUri.AbsoluteUri + "api/identity/jwt") -Headers $MmsHeaders -Body ($body | ConvertTo-Json) -ErrorAction Stop
+        [PSCustomObject]$jwtResponse = Invoke-RestMethod -Method Post -Uri ($MmsApiUri.AbsoluteUri + "api/identity/jwt") -Headers $MmsHeaders -Body (@{
+            User     = $Credentials.UserName
+            Password = [System.Net.NetworkCredential]::new("", $Credentials.Password).Password
+        } | ConvertTo-Json) -ErrorAction Stop
         if ($true -eq [string]::IsNullOrEmpty($response.Token)) {
             throw "Failed to get bearer token. Reply did not contain a token."
         }
@@ -206,6 +204,7 @@ elseif ($PSCmdlet.ParameterSetName -eq "Certificate") {
     try {
         [string]$MMSRootCertificatePEM = Invoke-RestMethod -Uri ($MmsApiUri.AbsoluteUri + "api/certificateservices/servercert") -Method GET -Headers @{"X-Neo42-Auth" = "Anonymous"; "Accept" = "application/json"} -ErrorAction Stop | Select-Object -ExpandProperty PemEncodedObject
         [System.Security.Cryptography.X509Certificates.X509Certificate2]$MMSRootCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new([Convert]::FromBase64String($MMSRootCertificatePEM.Trim("`r").Split("`n")[1..17] -join [string]::Empty))
+        Remove-Variable -Name "MMSRootCertificatePEM"
     }
     catch {
         Write-Error "Could not get MMS Root Certificate from [$MmsApiUri]`n$($_.Exception.Message)"
@@ -226,6 +225,7 @@ elseif ($PSCmdlet.ParameterSetName -eq "Certificate") {
             exit 1
         }
         $CertificateThumbprint = $MMSAccessCertificateCandidates[0].Thumbprint
+        Remove-Variable -Name "MMSAccessCertificateCandidates"
     }
 
     # Get the certificate for MMS API access from the store
@@ -240,6 +240,8 @@ elseif ($PSCmdlet.ParameterSetName -eq "Certificate") {
         exit 1
     }
 
+    Remove-Variable -Name "MMSRootCertificate"
+
     # Get the JWT token from the MMS API using the certificate and build the headers
     $script:MmsHeaders.Add("X-Neo42-Auth", "BlazorUI")
     try {
@@ -248,11 +250,14 @@ elseif ($PSCmdlet.ParameterSetName -eq "Certificate") {
             throw "Response did not contain a JWT token"
         }
         $script:MmsHeaders.Add("Authorization", "Bearer $($jwtResponse.Value)")
+        Remove-Variable -Name "jwtResponse"
     }
     catch {
         Write-Error "Could not get JWT token from [$MmsApiUri]`n$($_.Exception.Message)"
         exit 1
     }
+
+    Remove-Variable -Name "mmsCertificate"
 }
 else {
     Write-Error "Invalid parameter set [$($PSCmdlet.ParameterSetName)]"
@@ -274,6 +279,7 @@ try {
     }
     [PSCustomObject]$script:MMSTenant = $mmsTenants | Select-Object -First 1
     Write-Host "Tenant information for [$($script:MMSTenant.TenantName)] with description [$($script:MMSTenant.Description)] aquired."
+    Remove-Variable -Name "mmsTenants"
 }
 catch {
     Write-Error "Could not get tenant information from [$MmsApiUri]`n$($_.Exception.Message)"
@@ -314,6 +320,7 @@ if ($Mount.Count -gt 0) {
             Write-Error "Could not mount network share [$($networkShare.Name)] with path [$($networkShare.UNCPath)]`n$($_.Exception.Message)"
         }
     }
+    Remove-Variable -Name "networkShares", "networkShare", "share"
 }
 #endregion
 
@@ -333,6 +340,7 @@ if ($true -eq $ConnectConfigMgr) {
         [CimSession]$session = New-CimSession -ComputerName $configMgrConnection.Server -Credential $configMgrCredential -ErrorAction Stop
         [string]$configMgrSiteCode = (Get-CimInstance -CimSession $session -Namespace "root\sms" -Class "__Namespace").Name.Substring(5,3)
         Remove-CimSession -CimSession $session | Out-Null
+        Remove-Variable -Name "session"
         if ($true -eq $GetDataOnly) {
             Add-Member -InputObject $configMgrConnection -MemberType NoteProperty -Name 'SiteCode' -Value $configMgrSiteCode -Force -PassThru -ErrorAction Stop | Out-Null
             Set-Variable -Name "ConfigMgr" -Value $configMgrConnection -Scope Script
@@ -343,6 +351,7 @@ if ($true -eq $ConnectConfigMgr) {
             Set-Location -Path "$($configMgrDrive.Name):\" -ErrorAction Stop
             Write-Host "Successfully connected to ConfigMgr with server [$($configMgrConnection.Server)]. Drive is mapped to SiteCode [$configMgrSiteCode] and location has been updated."
         }
+        Remove-Variable -Name "configMgrConnection", "configMgrSiteCode", "configMgrDrive", "configMgrCredential"
     }
     catch {
         Write-Error "Could not connect to ConfigMgr to get its SiteCode`n$($_.Exception.Message)"
@@ -367,12 +376,14 @@ if ($true -eq $ConnectM42Cloud) {
                 $PSDefaultParameterValues["${empSDKCmndletName}:Session"] = $m42CloudSession
             }
             Write-Host "Successfully connected to Matrix42 Cloud with server [$($m42CloudConnection.Server)]. Session is available for all Empirum SDK cmdlets."
+            Remove-Variable -Name "empSDKCmndletName"
         }
         catch {
             Write-Error "Could not connect to Matrix42 Cloud`n$($_.Exception.Message)"
             exit 1
         }
     }
+    Remove-Variable -Name "m42CloudConnection", "m42CloudSession"
 }
 #endregion
 
@@ -389,19 +400,23 @@ if ($true -eq $ConnectEmpirum) {
             if ($false -eq [string]::IsNullOrEmpty($empConnection.Domain)){
                 $empConnection.User = $empConnection.Domain + '\' + $empConnection.User
             }
-            [PSCredential]$empCredential = [PSCredential]::new($empConnection.User, (ConvertTo-SecureString -AsPlainText -Force $empConnection.Password))
+            [securestring]$empConnectionPassword = ConvertTo-SecureString -AsPlainText -Force $empConnection.Password
+            $empConnectionPassword.MakeReadOnly()
+            [PSCredential]$empCredential = [PSCredential]::new($empConnection.User, $empConnectionPassword)
             foreach ($sqlSrvCmndletName in (Get-Command -Module SQLServer -ParameterName Credential, ServerInstance).Name) {
-                $PSDefaultParameterValues["${empSDKCmndletName}:Credential"] = $empCredential
-                $PSDefaultParameterValues["${empSDKCmndletName}:ServerInstance"] = $empConnection.Server
-                $PSDefaultParameterValues["${empSDKCmndletName}:TrustServerCertificate"] = $true
-                $PSDefaultParameterValues["${empSDKCmndletName}:Database"] = $empConnection.Database
+                $PSDefaultParameterValues["${sqlSrvCmndletName}:Credential"] = $empCredential
+                $PSDefaultParameterValues["${sqlSrvCmndletName}:ServerInstance"] = $empConnection.Server
+                $PSDefaultParameterValues["${sqlSrvCmndletName}:TrustServerCertificate"] = $true
+                $PSDefaultParameterValues["${sqlSrvCmndletName}:Database"] = $empConnection.Database
             }
+            Remove-Variable -Name "sqlSrvCmndletName"
         } 
         catch {
             Write-Error "Could not connect to Empirum database`n$($_.Exception.Message)"
             exit 1
         }
     }
+    Remove-Variable -Name "empConnection", "empConnectionPassword", "empCredential"
 }
 #endregion
 
@@ -447,6 +462,7 @@ if ($true -eq $ConnectIntune) {
             exit 1
         }
     }
+    Remove-Variable -Name "intuneConnection", "mgConnectionSplat", "intuneCertificate"
 }
 #endregion
 
@@ -459,5 +475,16 @@ if ($true -eq $ConnectWSO) {
     Write-Host "Connecting to WorkspaceONE..."
     [PSCustomObject]$wsoConnection = Get-MMSBridgeSettings -ServiceName "Wso"
     Set-Variable -Name "WSO" -Value $wsoConnection -Scope Script
+    Remove-Variable -Name "wsoConnection"
 }
 #endregion
+
+#region Cleanup variables
+Write-Host "Cleanup local environment..."
+# Param block
+@("MmsApiUri", "CertificateThumbprint", "Credentials", "TenantName", "Mount", "ConnectConfigMgr", "ConnectEmpirum", "ConnectM42Cloud", "ConnectIntune", "ConnectWSO", "GetDataOnly", "MmsHeaders", "MMSTenant") | ForEach-Object {
+    Remove-Variable -Name $_ -ErrorAction SilentlyContinue
+}
+#endregion
+
+Write-Host "Bridge and network share connection established successfully."
