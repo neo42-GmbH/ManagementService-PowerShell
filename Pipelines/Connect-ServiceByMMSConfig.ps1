@@ -555,6 +555,7 @@ if ($true -eq $ConnectIntune) {
 				exit 1
 			}
 			$mgConnectionSplat.Add('Certificate', $intuneCertificate)
+			Remove-Variable -Name 'intuneCertificate'
 		}
 		else {
 			Write-Error 'Could not determine the authentication method for Intune connection. Bridge is missing configuration.'
@@ -570,7 +571,7 @@ if ($true -eq $ConnectIntune) {
 			exit 1
 		}
 	}
-	Remove-Variable -Name 'intuneConnection', 'mgConnectionSplat', 'intuneCertificate'
+	Remove-Variable -Name 'intuneConnection', 'mgConnectionSplat'
 }
 #endregion
 
