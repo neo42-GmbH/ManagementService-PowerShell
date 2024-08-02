@@ -153,7 +153,7 @@ function Get-MMSBridgeSettings {
 	try {
 		[PSCustomObject]$serviceConfigRequest = Invoke-RestMethod -Uri ($MmsApiUri.AbsoluteUri + "api/apc/${ServiceName}Settings?tenantId=$($Tenant.TenantId)") -Method Get -Headers $MmsHeaders -ErrorAction Stop
 		if ($true -ne $serviceConfigRequest.Success) {
-			throw 'Failed to get WorkspaceONE connection information. Reply was not successful.'
+			throw "Failed to get [$ServiceName] connection information. Reply was not successful."
 		}
 		return $serviceConfigRequest.Item
 	}
@@ -419,7 +419,7 @@ if ($Mount.Count -gt 0) {
 		[PSCustomObject]$networkShare = $networkShares | Where-Object { $_.Name -eq $share }
 		if ($null -eq $networkShare) {
 			Write-Error "Could not find network share with name [$share]. Skipping..."
-			continue
+			exit 1
 		}
 		$networkShare.Name = $networkShare.Name -replace ' ', '_'
 		if ($true -eq $GetDataOnly) {
@@ -433,6 +433,7 @@ if ($Mount.Count -gt 0) {
 		}
 		catch {
 			Write-Error "Could not mount network share [$($networkShare.Name)] with path [$($networkShare.UNCPath)]`n$($_.Exception.Message)"
+			exit 1
 		}
 	}
 	Remove-Variable -Name 'networkShares', 'networkShare', 'share'
