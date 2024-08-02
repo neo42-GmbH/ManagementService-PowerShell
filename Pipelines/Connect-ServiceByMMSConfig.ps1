@@ -417,13 +417,14 @@ if ($Mount.Count -gt 0) {
 	}
 	foreach ($share in $Mount) {
 		[PSCustomObject]$networkShare = $networkShares | Where-Object { $_.Name -eq $share }
+		if ($null -eq $networkShare) {
+			Write-Error "Could not find network share with name [$share]. Skipping..."
+			continue
+		}
+		$networkShare.Name = $networkShare.Name -replace ' ', '_'
 		if ($true -eq $GetDataOnly) {
 			Set-Variable -Name "NetworkShare_$($networkShare.Name)" -Value $networkShare -Scope Script
 			Write-Host "Credentials for network share [$($networkShare.Name)] have been stored in variable [NetworkShare_$($networkShare.Name)]"
-			continue
-		}
-		if ($null -eq $networkShare) {
-			Write-Error "Could not find network share with name [$share]. Skipping..."
 			continue
 		}
 		try {
@@ -494,8 +495,9 @@ if ($true -eq $ConnectM42Cloud) {
 			Write-Error "Could not connect to Matrix42 Cloud`n$($_.Exception.Message)"
 			exit 1
 		}
+		Remove-Variable -Name 'm42CloudSession'
 	}
-	Remove-Variable -Name 'm42CloudConnection', 'm42CloudSession'
+	Remove-Variable -Name 'm42CloudConnection'
 }
 #endregion
 
@@ -523,8 +525,9 @@ if ($true -eq $ConnectEmpirum) {
 			Write-Error "Could not connect to Empirum database`n$($_.Exception.Message)"
 			exit 1
 		}
+		Remove-Variable -Name 'empCredential'
 	}
-	Remove-Variable -Name 'empConnection', 'empCredential'
+	Remove-Variable -Name 'empConnection'
 }
 #endregion
 
@@ -570,8 +573,9 @@ if ($true -eq $ConnectIntune) {
 			Write-Error "Could not connect to Intune`n$($_.Exception.Message)"
 			exit 1
 		}
+		Remove-Variable -Name 'mgConnectionSplat'
 	}
-	Remove-Variable -Name 'intuneConnection', 'mgConnectionSplat'
+	Remove-Variable -Name 'intuneConnection'
 }
 #endregion
 
