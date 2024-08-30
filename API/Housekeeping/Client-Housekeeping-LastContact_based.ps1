@@ -13,10 +13,10 @@
 .OUTPUTS
 	none
 .NOTES
-	Version:		1.1
+	Version:		1.2
 	Author:			neo42 GmbH
-	Creation Date:	29.11.2023
-	Purpose/Change:	Align with new api and coding standards
+	Creation Date:	30.08.2024
+	Purpose/Change:	Handle empty LastAccess property.
 .EXAMPLE
 	.\Client-Housekeeping-LastContact_based.ps1 -ServerName "https://server.domain:4242" -RemoveAfterDays 90
 #>
@@ -36,9 +36,20 @@ $headers.Add("X-Neo42-Auth", "Admin")
 $clients = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
 
 foreach ($client in $clients) {
-	if ([DateTime]$client.LastAccess -lt ((Get-Date).AddDays(-$RemoveAfterDays))) {
-		$deleteurl = "$ServerName/api/ServiceInfrastructureV3/$($client.Id)"
-		Invoke-RestMethod -Method Delete -Uri $deleteurl -Headers $headers -UseDefaultCredentials
-		Start-Sleep -Seconds 1
+    if ($false -eq [string]::IsNullOrEmpty($client.LastAccess)) {
+        [DateTime]$lastContact = $client.LastAccess
+    } 
+    elseif ($false -eq [string]::IsNullOrEmpty($client.CreationDate)) {
+        [DateTime]$lastContact = $client.CreationDate
+    }
+    else {
+        Write-Error $client.Name + " cannot be deleted because its last access time cannot be determined. Manual fix is required."
+		continue
+    }
+	if ($lastContact -lt ((Get-Date).AddDays(-$RemoveAfterDays))) {
+		[uri]$deleteUrl = "$ServerName/api/ServiceInfrastructureV3/$($client.Id)"
+		Write-Host "Deleting $($client.Name) with ID $($client.Id) because of last contact at $($lastContact)"
+		Invoke-RestMethod -Method Delete -Uri $deleteUrl -Headers $headers -UseDefaultCredentials
+		Start-Sleep -Milliseconds 100
 	}
 }
