@@ -90,7 +90,6 @@ else {
 
 foreach ($block in $detectionBlocks) {
 	[int]$offset = . $block
-	Write-Host $offset
 	if ($offset -gt 0) {
 		break
 	}
