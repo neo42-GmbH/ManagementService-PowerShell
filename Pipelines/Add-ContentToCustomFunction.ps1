@@ -89,7 +89,7 @@ else {
 }
 
 foreach ($block in $detectionBlocks) {
-	[int]$offset = . $block
+	[int]$offset = $block.Invoke()
 	if ($offset -gt 0) {
 		break
 	}
