@@ -54,7 +54,8 @@ if ($PSCmdlet.ParameterSetName -eq 'File') {
 }
 ## Import the Deploy-Application.ps1 file and validate it
 [System.Management.Automation.Language.ParseError[]]$errors = @()
-[System.Management.Automation.Language.Ast]$ast = [System.Management.Automation.Language.Parser]::ParseFile($DeployApplicationFile.FullName, [ref]$null, [ref]$errors)
+[System.Management.Automation.Language.Token[]]$tokens = @()
+[System.Management.Automation.Language.Ast]$ast = [System.Management.Automation.Language.Parser]::ParseFile($DeployApplicationFile.FullName, [ref]$tokens, [ref]$errors)
 if ($errors.Count -gt 0) {
 	throw "The file '$DeployApplicationFile' contains syntax errors: `n$($errors -join "`n")"
 }
@@ -72,19 +73,30 @@ if ($null -eq $customFunction) {
 [string]$outputText = $ast.Extent.Text
 [string]$insertContent = "`r`n`t" + ($Content -join "`r`n`t") + "`r`n"
 if ($true -eq $InsertAtEnd) {
-	$outputText = $outputText.Insert($customFunction.Body.Extent.EndScriptPosition.Offset - 1, $insertContent)
+	[scriptblock[]]$detectionBlocks = @(
+		{($tokens | Where-Object { $_.Kind -eq 'Comment' -and $_.Extent.Text -match "\s*\#endregion $($customFunction.Name) content\s*"} | Select-Object -First 1 -ExpandProperty Extent).StartOffset - 1},
+		{$customFunction.Body.Extent.EndOffset - 1}
+	)
 }
 else {
-	## Determine the position to insert the content
-	[System.Management.Automation.Language.AssignmentStatementAst]$phaseMarker = $customFunction.Find({ $args[0] -is [System.Management.Automation.Language.AssignmentStatementAst] -and $args[0].Left.Child.VariablePath.UserPath -eq 'script:installPhase' }, $true)
-	if ($null -ne $phaseMarker) {
-		$outputText = $outputText.Insert($phaseMarker.Extent.EndScriptPosition.Offset, $insertContent)
-	}
-	elseif ($null -ne $customFunction.Body.ParamBlock) {
-		$outputText = $outputText.Insert($customFunction.Body.ParamBlock.Extent.EndScriptPosition.Offset, $insertContent)
-	}
-	else {
-		$outputText = $outputText.Insert($customFunction.Body.Extent.StartScriptPosition.Offset + 1, $insertContent)
+	## Determine the extend after which to insert the content
+	[scriptblock[]]$detectionBlocks = @(
+		{($tokens | Where-Object { $_.Kind -eq 'Comment' -and $_.Extent.Text -match "\s*\#region $($customFunction.Name) content\s*"} | Select-Object -First 1 -ExpandProperty Extent).EndOffset},
+		{$customFunction.Find({ $args[0] -is [System.Management.Automation.Language.AssignmentStatementAst] -and $args[0].Left.Child.VariablePath.UserPath -eq 'script:installPhase' }, $true).Extent.EndOffset},
+		{$customFunction.Body.ParamBlock.Extent.EndOffset},
+		{$customFunction.Body.Extent.StartOffset + 1}
+	)
+}
+
+foreach ($block in $detectionBlocks) {
+	[int]$offset = $block.Invoke()
+	if ($offset -gt 0) {
+		break
 	}
 }
+if ($offset -eq 0) {
+	throw "Could not determine the position to insert the content in the custom function '$FunctionName'"
+}
+
+$outputText = $outputText.Insert($offset, $insertContent)
 Set-Content -Path $DeployApplicationFile.FullName -Value $outputText -Encoding UTF8
