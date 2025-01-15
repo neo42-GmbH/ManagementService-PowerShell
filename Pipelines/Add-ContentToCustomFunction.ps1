@@ -99,4 +99,4 @@ if ($offset -eq 0) {
 }
 
 $outputText = $outputText.Insert($offset, $insertContent)
-Set-Content -Path $DeployApplicationFile.FullName -Value $outputText -Encoding UTF8
+Set-Content -Path $DeployApplicationFile.FullName -Value $outputText -Encoding UTF8 -NoNewline
