@@ -103,6 +103,6 @@ try {
 	Set-Content -Path $DeployApplicationFile.FullName -Value $outputText -Encoding UTF8 -NoNewline
 }
 catch {
-	$Host.UI.WriteErrorLine((Out-String -InputObject $_ -Width ([System.Int32]::MaxValue)))
+	Write-Error $_.Exception.Message
 	exit 1
 }
