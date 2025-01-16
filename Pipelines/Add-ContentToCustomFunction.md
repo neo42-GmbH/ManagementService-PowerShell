@@ -26,6 +26,6 @@ With this above example the content of `CustomCode.ps1` will be injected to the 
 
 
 ## References
-For a full reference to the available parameters, please consult the [scriptfile](https://github.com/neo42-GmbH/ManagementService-PowerShell/blob/master/Pipelines/Add-ContentToCustomFunction.ps1) itself.
+For a full reference to the available parameters, please consult the [scriptfile](Pipelines/Add-ContentToCustomFunction.ps1) itself.
 
 For all hook functions, consult the content of the any recent [`Deploy-Application.ps1`](https://github.com/neo42-GmbH/PSAppDeployToolKitExtensions/blob/production/Deploy-Application.ps1) file. 
