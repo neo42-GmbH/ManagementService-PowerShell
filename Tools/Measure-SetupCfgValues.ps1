@@ -71,15 +71,13 @@ foreach ($file in $cfgFiles) {
 
 			# Only add requested data to output
 			if ($false -eq $DiffOnly -or $Matches['value'].Trim() -ne $defaultVal) {
-				$outputData += [PSCustomObject]::new(
-					@{
-						Filepath = $file.FullName
-						Section = $section
-						Key = $Matches['key'].Trim()
-						Value = $Matches['value'].Trim()
-						Default = $defaultVal
-					}
-				)
+				$outputData += [PSCustomObject]@{
+					Filepath = $file.FullName
+					Section = $section
+					Key = $Matches['key'].Trim()
+					Value = $Matches['value'].Trim()
+					Default = $defaultVal
+				}
 			}
 
 			# Reset defaultVal for detection logic to re-apply
