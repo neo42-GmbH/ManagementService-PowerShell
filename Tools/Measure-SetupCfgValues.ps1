@@ -89,7 +89,7 @@ foreach ($file in $cfgFiles) {
 }
 
 # Export the data to CSV
-if ($null -ne $OutputCsv) {
+if ($true -eq [string]::IsNullOrWhiteSpace($OutputCsv)) {
 	$outputData | Export-Csv -Path $OutputCsv -NoTypeInformation -Encoding UTF8
 }
 else {
