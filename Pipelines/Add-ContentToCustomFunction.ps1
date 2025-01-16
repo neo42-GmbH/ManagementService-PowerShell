@@ -17,7 +17,7 @@
 	.PARAMETER InsertAtEnd
 		Insert the content at the end of the custom function. Default is to insert at the beginning.
 	.EXAMPLE
-		Add-ContentToCustomFunction -DeployApplicationFile '$PWD\Deploy-Application.ps1' -Content 'Write-Host "Hello, World!"' -FunctionName 'CustomBegin' -InsertAtEnd
+		Add-ContentToCustomFunction -DeployApplicationFile '$PWD\Deploy-Application.ps1' -Content 'Write-Host "Hello, World!"' -FunctionName 'CustomInstallAndReinstallAndSoftMigrationEnd' -InsertAtEnd
 	.EXAMPLE
 		Add-ContentToCustomFunction -DeployApplicationFile 'Deploy-Application.ps1' -ContentFile 'C:\PSLibrary\Content.ps1' -FunctionName 'CustomBegin'
 	.Outputs
