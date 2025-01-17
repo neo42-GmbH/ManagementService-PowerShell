@@ -24,7 +24,7 @@
 	Exports a CSV file containing data from all setup.cfg files found in the specified folder that have non-default values.
 
 	.NOTES
-	Author:  Your Name
+	Author:  neo42 GmbH
 	Created: 2025-01-16
 	Version: 1.0
 	This script uses comment-based help to outline functionality and usage.
