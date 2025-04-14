@@ -47,7 +47,7 @@ if ($pipelines.Success) {
             if ($null -ne $run.StartTime -and $null -ne $run.EndTime) {
                 $count++    
                 $age = New-TimeSpan -Start (Get-Date $run.EndTime) -End (Get-Date)
-                if ($count -gt $MaximumRuns -or $age.Days -gt $MaximumRuns) {
+                if ($count -gt $MaximumRuns -or $age.Days -gt $RemoveAfterDays) {
                     # Delete the given pipeline run from the MMS Server.
                     $url = "$ServerName/api/apc/PipelineRun/$($run.RunId)"                    
                     $result = Invoke-RestMethod -Method Delete -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
