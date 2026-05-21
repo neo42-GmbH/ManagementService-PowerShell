@@ -29,9 +29,9 @@ Param (
 	[parameter(Mandatory = $true)]
 	[String]
 	$ServerName,
-	[parameter(Mandatory = $false)]	
-	[String]
-	$OutputPath = "$PSScriptRoot",
+	[parameter(Mandatory = $true)]
+	[System.IO.DirectoryInfo]
+	$OutputPath,
 	[parameter(Mandatory = $true)]
 	[String]
 	$Domain,

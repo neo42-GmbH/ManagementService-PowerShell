@@ -9,9 +9,9 @@ Param (
 	[Parameter(Mandatory = $true)]
 	[string]
 	$ServerName,
-	[Parameter(Mandatory = $false)]
-	[string]
-	$OutputPath = $PWD
+	[parameter(Mandatory = $true)]
+	[System.IO.DirectoryInfo]
+	$OutputPath
 )
 
 $targetsUrl = "$ServerName/api/NotificationCenter/Target/All"
