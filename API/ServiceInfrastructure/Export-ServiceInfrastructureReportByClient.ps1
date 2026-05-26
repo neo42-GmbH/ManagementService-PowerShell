@@ -29,9 +29,9 @@ Param (
 	[parameter(Mandatory = $true)]
 	[String]
 	$ServerName,
-	[parameter(Mandatory = $false)]	
-	[String]
-	$OutputPath = "$PSScriptRoot",
+	[parameter(Mandatory = $true)]
+	[System.IO.DirectoryInfo]
+	$OutputPath,
 	[parameter(Mandatory = $true)]
 	[String]
 	$Domain,
@@ -41,7 +41,7 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "ServiceInfrastructureReport.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "ServiceInfrastructureReport.csv"
 
 $clientByNameUrl = "$ServerName/api/Client/$Domain/$ClientName"
 $siReportUrl = "$ServerName/api/ServiceInfrastructureV3/{CLIENTID}"

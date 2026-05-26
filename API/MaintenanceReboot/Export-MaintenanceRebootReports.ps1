@@ -25,13 +25,13 @@ Param (
 	[parameter(Mandatory = $true)]
 	[String]
 	$ServerName,
-	[parameter(Mandatory = $false)]	
-	[String]
-	$OutputPath = "$PSScriptRoot"
+	[parameter(Mandatory = $true)]
+	[System.IO.DirectoryInfo]
+	$OutputPath
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "MaintenanceRebootReports.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "MaintenanceRebootReports.csv"
 
 $clientUrl = "$ServerName/api/Client"
 $maintenanceRebootReportUrl = "$ServerName/api/MaintenanceReportV3"

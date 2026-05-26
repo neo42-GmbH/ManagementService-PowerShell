@@ -9,15 +9,15 @@ Param (
 	[Parameter(Mandatory = $true)]
 	[string]
 	$ServerName,
-	[Parameter(Mandatory = $false)]
-	[string]
-	$OutputPath = $PWD
+	[parameter(Mandatory = $true)]
+	[System.IO.DirectoryInfo]
+	$OutputPath
 )
 
 $targetsUrl = "$ServerName/api/NotificationCenter/Target/All"
 $notificationsUrl = "$ServerName/api/NotificationCenter/Notifications/All"
 
-$filePath = Join-Path -Path $OutputPath -ChildPath "ExpiredNotReceivedNotifications.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "ExpiredNotReceivedNotifications.csv"
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("X-Neo42-Auth", "Admin")

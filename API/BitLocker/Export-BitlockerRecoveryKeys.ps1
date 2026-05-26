@@ -25,13 +25,13 @@ Param (
 	[Parameter(Mandatory = $true)]
 	[string]
 	$ServerName,
-	[Parameter(Mandatory = $false)]
-	[string]
-	$OutputPath = "$PSScriptRoot"
+	[parameter(Mandatory = $true)]	
+	[System.IO.DirectoryInfo]
+	$OutputPath
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "BitlockerRecoveryKeys.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "BitlockerRecoveryKeys.csv"
 
 #prepare request headers
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"

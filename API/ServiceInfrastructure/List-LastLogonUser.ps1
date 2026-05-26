@@ -25,13 +25,13 @@ Param (
 	[parameter(Mandatory = $true)]
 	[String]
 	$ServerName,
-	[parameter(Mandatory = $false)]	
-	[String]
-	$OutputPath = "$PSScriptRoot"
+	[parameter(Mandatory = $true)]
+	[System.IO.DirectoryInfo]
+	$OutputPath
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "LastLogonUser.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "LastLogonUser.csv"
 
 $clientUrl = "$ServerName/api/client"
 $siURL = "$ServerName/api/ServiceInfrastructureV3"

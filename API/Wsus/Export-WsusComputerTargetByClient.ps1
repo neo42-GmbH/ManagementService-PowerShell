@@ -25,9 +25,9 @@ Param (
     [parameter(Mandatory = $true)]
     [String]
     $ServerName,
-    [parameter(Mandatory = $false)]	
-    [String]
-    $OutputPath = "$PSScriptRoot",
+    [parameter(Mandatory = $true)]
+	[System.IO.DirectoryInfo]
+	$OutputPath,
     [parameter(Mandatory = $true)]
     [String]
     $Domain,
@@ -37,7 +37,7 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "WsusComputerTargetReport.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "WsusComputerTargetReport.csv"
 
 $wsusComputerTargetByNetbiosUrl = "$ServerName/api/WsusComputerTargetV2/$([System.Guid]::Empty)?netBiosName={NETBIOSNAME}"
 $wsusUpdateSummariesPerComputerTargetUrl = "$ServerName/api/WsusUpdateSummariesPerComputerV2/{CLIENTNAME}"

@@ -29,9 +29,9 @@ Param (
 	[Parameter(Mandatory = $true)]
 	[string]
 	$ServerName,
-	[Parameter(Mandatory = $false)]
-	[string]
-	$OutputPath = "$PSScriptRoot",
+	[parameter(Mandatory = $true)]	
+	[System.IO.DirectoryInfo]
+	$OutputPath,
     [parameter(Mandatory = $true)]
     [String]
     $Domain,
@@ -43,7 +43,7 @@ Param (
 $clientUrl = "$ServerName/api/Client/$Domain/$ClientName"
 $deviceInformationSvcReportUrl = "$ServerName/api/DeviceInformationV2/{CLIENTID}"
 
-$filePath = Join-Path -Path $OutputPath -ChildPath "DeviceInformationServices.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "DeviceInformationServices.csv"
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("X-Neo42-Auth", "Admin")

@@ -26,13 +26,13 @@ Param (
 	[Parameter(Mandatory = $true)]
 	[string]
 	$ServerName,
-	[Parameter(Mandatory = $false)]
-	[string]
-	$OutputPath = "$PSScriptRoot"
+	[parameter(Mandatory = $true)]	
+	[System.IO.DirectoryInfo]
+	$OutputPath
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "LocalAdministrators.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "LocalAdministrators.csv"
 
 # Filter with possible names of local admin groups
 filter groupFilter { if ($_.Name -EQ "Administratoren" -OR $_.Name -EQ "Administrators") { $_ } }

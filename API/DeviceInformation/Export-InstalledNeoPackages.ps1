@@ -25,12 +25,12 @@ Param (
     [Parameter(Mandatory = $true)]
     [string]
     $ServerName,
-    [Parameter(Mandatory = $false)]
-    [string]
-    $OutputPath = "$PSScriptRoot"
+    [parameter(Mandatory = $true)]
+	[System.IO.DirectoryInfo]
+	$OutputPath
 )
 
-$filePath = Join-Path -Path $OutputPath -ChildPath "InstalledNeoPackages.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "InstalledNeoPackages.csv"
 
 $clientUrl = "$ServerName/api/Client/$Domain/$ClientName"
 $deviceInformationSoftwareUrl = "$ServerName/api/DeviceInformationV2/?type=sw"
