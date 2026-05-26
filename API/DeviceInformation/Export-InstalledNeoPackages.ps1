@@ -30,7 +30,7 @@ Param (
 	$OutputPath
 )
 
-$filePath = Join-Path -Path $OutputPath -ChildPath "InstalledNeoPackages.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "InstalledNeoPackages.csv"
 
 $clientUrl = "$ServerName/api/Client/$Domain/$ClientName"
 $deviceInformationSoftwareUrl = "$ServerName/api/DeviceInformationV2/?type=sw"

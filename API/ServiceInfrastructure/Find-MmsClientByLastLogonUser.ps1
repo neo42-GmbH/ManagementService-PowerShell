@@ -43,7 +43,7 @@ param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "$($Domain)_$($UserName).csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "$($Domain)_$($UserName).csv"
 
 $clientUrl = "$ServerName/api/Client"
 $siUrl = "$ServerName/api/ServiceInfrastructureV3/{CLIENTID}"

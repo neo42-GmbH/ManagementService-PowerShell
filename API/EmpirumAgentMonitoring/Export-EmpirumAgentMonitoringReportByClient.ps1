@@ -37,7 +37,7 @@ Param (
 )
 
 # Filename with the collected data
-$filename = Join-Path -Path $OutputPath -ChildPath "EmpirumAgentMonitoringReport.csv"
+$filename = Join-Path -Path $OutputPath.FullName -ChildPath "EmpirumAgentMonitoringReport.csv"
 
 $clientByNameUrl = "$ServerName/api/Client/$Domain/$ClientName"
 $empirumReportUrl = "$ServerName/api/EmpirumMonitoringReportV2/{CLIENTID}"

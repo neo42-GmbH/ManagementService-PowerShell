@@ -31,7 +31,7 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "AvailablePackages.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "AvailablePackages.csv"
 
 $dpURL = "$ServerName/api/apc/DefaultPackage/all/0"
 

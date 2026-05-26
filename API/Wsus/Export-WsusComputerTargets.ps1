@@ -31,7 +31,7 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "WsusComputerTargets.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "WsusComputerTargets.csv"
 
 $wsusComputerTargetUrl = "$ServerName/api/WsusComputerTargetV2"
 $wsusUpdateSummariesPerComputerTargetUrl = "$ServerName/api/WsusUpdateSummariesPerComputerV2"

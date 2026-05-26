@@ -34,7 +34,7 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "PurgedBitLockerRecoveryKeys.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "PurgedBitLockerRecoveryKeys.csv"
 
 $clientUrl = "$ServerName/api/Client"
 $blRecBackupURL = "$ServerName/api/BitlockerRecoveryKeyBackup"

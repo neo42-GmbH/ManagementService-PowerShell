@@ -31,7 +31,7 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "BitlockerRecoveryKeys.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "BitlockerRecoveryKeys.csv"
 
 #prepare request headers
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"

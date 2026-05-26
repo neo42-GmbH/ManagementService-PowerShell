@@ -21,7 +21,7 @@ $targetsUrl = "$ServerName/api/NotificationCenter/Target/All"
 $notificationsClientBaseUrl = "$ServerName/api/NotificationCenter/Notifications/Client"
 $notificationsBaseUrl = "$ServerName/api/NotificationCenter/Notifications"
 
-$filePath = Join-Path -Path $OutputPath -ChildPath "ClientNotificationReport.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "ClientNotificationReport.csv"
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("X-Neo42-Auth", "Admin")

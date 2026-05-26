@@ -43,7 +43,7 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "MaintenanceRebootReport.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "MaintenanceRebootReport.csv"
 
 $clientByNameUrl = "$ServerName/api/Client/$Domain/$ClientName"
 $maintenanceRebootReportUrl = "$ServerName/api/MaintenanceReportV3/{CLIENTID}"

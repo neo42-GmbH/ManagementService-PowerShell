@@ -32,7 +32,7 @@ Param (
 )
 
 # Filename with the collected data
-$filePath = Join-Path -Path $OutputPath -ChildPath "DriveMonitoringReports.csv"
+$filePath = Join-Path -Path $OutputPath.FullName -ChildPath "DriveMonitoringReports.csv"
 
 $clientUrl = "$ServerName/api/client"
 $driveMonitoringReportUrl = "$ServerName/api/DriveMonitoringReport"
