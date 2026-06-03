@@ -39,7 +39,7 @@ $headers.Add("X-Neo42-Auth", "Admin")
 
 # Get Clientlist from MMS Server
 $clientUrl = "$ServerName/api/client"
-$adRecoveryKeyUrl = "$ServerName/api/BitlockerAdRecoveryKey/{CLIENTID}"
+$adRecoveryKeyUrl = "$ServerName/api/BitlockerAdRecoveryKey?clientId={CLIENTID}"
 $mmsRecoveryKeyUrl = "$ServerName/api/BitlockerInBuiltRecoveryKey/{CLIENTID}"
 
 $clients = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
@@ -54,11 +54,13 @@ foreach ($client in $clients) {
 		Expression = { $([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.key))) }
 	} | Export-Csv -NoTypeInformation -Append -Path $filePath -Encoding UTF8
 	$MMSRecoveryKeys = Invoke-RestMethod -Method Get -Uri $mmsRecoveryKeyUrl.Replace('{CLIENTID}', $client.id) -Headers $headers -UseDefaultCredentials
-	$MMSRecoveryKeys | Select-Object -ExcludeProperty key *, @{
-		Label      = "StoredIn"
-		Expression = { "MMS" }
-	}, @{
-		Label      = "key"
-		Expression = { $([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.key))) }
-	} | Export-Csv -NoTypeInformation -Append -Path $filePath -Encoding UTF8
+	if ($MMSRecoveryKeys -ne "null") {
+		$MMSRecoveryKeys | Select-Object -ExcludeProperty key *, @{
+			Label      = "StoredIn"
+			Expression = { "MMS" }
+		}, @{
+			Label      = "key"
+			Expression = { $([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.key))) }
+		} | Export-Csv -NoTypeInformation -Append -Path $filePath -Encoding UTF8
+	}
 }
