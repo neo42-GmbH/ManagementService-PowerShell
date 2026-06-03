@@ -56,7 +56,7 @@ if ($null -eq $client) {
 	Exit 1
 }
 
-$report = Invoke-RestMethod -Method Get -Uri $bitlockerReportUrl.Replace("{CLIENTID}", "$($client.Id)") -UseDefaultCredentials -ErrorAction Stop
+$report = Invoke-RestMethod -Method Get -Uri $bitlockerReportUrl.Replace("{CLIENTID}", "$($client.Id)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
 if ($null -eq $report) {
 	Write-Warning "No drive monitoring report found for $($Domain)\$($ClientName)"
 	Exit 1
@@ -69,10 +69,10 @@ $Compliancestates[2] = "Compliant"
 
 $obj = New-Object System.Object
 $obj | Add-Member -type NoteProperty -name Client -value $client.NetBiosName
-$obj | Add-Member -type NoteProperty -name ReportDate -value $report.CreationDate
-$obj | Add-Member -type NoteProperty -name State -value $Compliancestates[$report.ComplianceState]
-$obj | Add-Member -type NoteProperty -name CurrentEncryptionTries -value $report.CurrentEncryptionTriesCount
-$obj | Add-Member -type NoteProperty -name MaxEncryptionTries -value $report.MaxEncryptionTriesCount
+$obj | Add-Member -type NoteProperty -name ReportDate -value $report.Data.CreationDate
+$obj | Add-Member -type NoteProperty -name State -value $Compliancestates[$report.Data.ComplianceState]
+$obj | Add-Member -type NoteProperty -name CurrentEncryptionTries -value $report.Data.CurrentEncryptionTriesCount
+$obj | Add-Member -type NoteProperty -name MaxEncryptionTries -value $report.Data.MaxEncryptionTriesCount
 
 $output = New-Object Collections.Generic.List[System.Object]
 $output.Add($obj)
