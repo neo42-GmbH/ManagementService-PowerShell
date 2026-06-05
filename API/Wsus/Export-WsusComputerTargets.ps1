@@ -27,7 +27,7 @@ Param (
 	$ServerName,
 	[parameter(Mandatory = $true)]	
 	[System.IO.DirectoryInfo]
-	$OutputPath = "$PSScriptRoot"
+	$OutputPath
 )
 
 # Filename with the collected data
