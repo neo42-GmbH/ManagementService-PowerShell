@@ -54,7 +54,7 @@ foreach ($client in $clients) {
 		Expression = { $([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.key))) }
 	} | Export-Csv -NoTypeInformation -Append -Path $filePath -Encoding UTF8
 	$MMSRecoveryKeys = Invoke-RestMethod -Method Get -Uri $mmsRecoveryKeyUrl.Replace('{CLIENTID}', $client.id) -Headers $headers -UseDefaultCredentials
-	if ($MMSRecoveryKeys -ne "null") {
+	if ($MMSRecoveryKeys -ne "null" -and $false -eq [string]::IsNullOrWhiteSpace($MMSRecoveryKeys)) {
 		$MMSRecoveryKeys | Select-Object -ExcludeProperty key *, @{
 			Label      = "StoredIn"
 			Expression = { "MMS" }
