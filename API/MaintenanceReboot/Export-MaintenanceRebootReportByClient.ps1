@@ -58,7 +58,7 @@ if ($null -eq $client) {
 	Exit 1
 }
 
-$report = Invoke-RestMethod -Method Get -Uri $maintenanceRebootReportUrl.Replace("{CLIENTID}", "$($client.Id)") -UseDefaultCredentials -ErrorAction Stop
+$report = Invoke-RestMethod -Method Get -Uri $maintenanceRebootReportUrl.Replace("{CLIENTID}", "$($client.Id)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
 if ($null -eq $report) {
 	Write-Warning "No drive monitoring report found for $($Domain)\$($ClientName)"
 	Exit 1
