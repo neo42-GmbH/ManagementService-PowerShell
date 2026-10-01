@@ -46,7 +46,8 @@ if ($pipelines.Success) {
         $runs = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
         $count = 0;
 
-        foreach ($run in ($runs | Sort-Object { Get-Date($_.StartTime) } -Descending)) {
+        # Runs that never started have no StartTime; they are sorted last instead of raising an error.
+        foreach ($run in ($runs | Sort-Object { if ($_.StartTime) { Get-Date $_.StartTime } } -Descending)) {
             if ($null -ne $run.StartTime -and $null -ne $run.EndTime) {
                 $count++    
                 $age = New-TimeSpan -Start (Get-Date $run.EndTime) -End (Get-Date)
