@@ -6,6 +6,9 @@
     All pipeline runs that are older than the RemoveAfterDays or exceeds the count of 
     MaximumRuns per pipeline will be removed from the database. The product automation
     history for these runs is also removed.
+    Pipeline runs that were canceled before they started have neither a start nor an
+    end time and are never removed by the server; they are deleted regardless of age
+    and count.
 .PARAMETER ServerName
 	The servername of the neo42 Management Service.
 .PARAMETER RemoveAfterDays
@@ -53,6 +56,12 @@ if ($pipelines.Success) {
                     $result = Invoke-RestMethod -Method Delete -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
                 }
             }        
+            elseif ($run.State -eq 4 -and $null -eq $run.EndTime) {
+                # A run that is canceled while still queued (State 4 = Canceled) never gets a
+                # start or end time, It has not run anything, so we delete it right away.
+                $url = "$ServerName/api/apc/PipelineRun/$($run.RunId)"
+                $result = Invoke-RestMethod -Method Delete -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+            }
         }
     }
 }
