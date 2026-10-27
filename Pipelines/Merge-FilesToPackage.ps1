@@ -1,7 +1,9 @@
 <#
 .SYNOPSIS
-	Merge provided files, folders or logos to the PSADT package
+	OBSOLETE - Merge provided files, folders or logos to the PSADT package
 .DESCRIPTION
+	OBSOLETE: This script only supports PSADT v3 based packages and is no longer maintained.
+	Use Merge-FilesToPackageV4.ps1 instead, which supports PSADT v3 (PackageFramework 3.0) and PSADT v4 (PackageFramework 4.0) based packages.
 	Script to copy files, folders or logos to neo42 PSADT package
 .PARAMETER PackagePath
 	The PackagePath of the neo42 APC PSADT working directory  
