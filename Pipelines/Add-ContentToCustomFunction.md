@@ -1,4 +1,7 @@
 # Add-ContentToCustomFunction
+> **OBSOLETE:** `Add-ContentToCustomFunction.ps1` only supports PSADT v3 based packages and is no longer maintained.
+> Use [`Add-ContentToCustomFunctionV4.ps1`](Add-ContentToCustomFunctionV4.md) instead, which supports PSADT v3 (PackageFramework 3.0) and PSADT v4 (PackageFramework 4.0) based packages.
+
 The `Add-ContentToCustomFunction` script was developed to allow automated injections of user scripts into the designated hook functions inside the PSADT-based packages.
 It's main use case is the integration into the neo42 Application Package Center (APC) pipelines.
 

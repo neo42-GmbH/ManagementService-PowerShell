@@ -1,7 +1,9 @@
 <#
 	.SYNOPSIS
-		Add content to a custom function.
+		OBSOLETE - Add content to a custom function.
 	.DESCRIPTION
+		OBSOLETE: This script only supports PSADT v3 based packages and is no longer maintained.
+		Use Add-ContentToCustomFunctionV4.ps1 instead, which supports PSADT v3 (PackageFramework 3.0) and PSADT v4 (PackageFramework 4.0) based packages.
 		Adds content to a custom function in a Deploy-Application.ps1 file.
 		The position of the content can be specified to be at the beginning or end of the custom function.
 		If the custom function is not found or any of the specified content is not valid PowerShell code, an error is thrown.
