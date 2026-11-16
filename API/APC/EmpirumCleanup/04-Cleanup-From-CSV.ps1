@@ -1,4 +1,4 @@
-# Empirum Cleanup API - Workflow 4: Cleanup based on CSV list
+﻿# Empirum Cleanup API - Workflow 4: Cleanup based on CSV list
 # Starts a cleanup job for packages from a previously exported CSV file
 
 param(
@@ -23,7 +23,13 @@ param(
 )
 
 # Load module
-Import-Module "$PSScriptRoot\neo42MmsApiModule.psm1" -Force
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
 
 Write-Host "Empirum Cleanup API - Cleanup from CSV list" -ForegroundColor Cyan
 
@@ -34,8 +40,8 @@ if (-not (Test-Path $CsvPath)) {
     exit 1
 }
 
-# Configure server
-Set-Neo42ServerName -ServerName $ServerName
+# Open the session that every following call uses
+Connect-MmsApi -ServerName $ServerName
 
 Write-Host "`nLoading CSV file..." -ForegroundColor Yellow
 Write-Host "File: $CsvPath" -ForegroundColor Gray

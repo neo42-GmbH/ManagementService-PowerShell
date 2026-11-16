@@ -16,7 +16,7 @@
 	Version:		1.1
 	Author:			neo42 GmbH
 	Creation Date:	29.11.2023
-	Purpose/Change:	Align with new api and coding standards
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Export-WsusComputerTargets.ps1 -ServerName "https://server.domain:4242"
 #>
@@ -30,18 +30,22 @@ Param (
 	$OutputPath
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "WsusComputerTargets.csv"
 
-$wsusComputerTargetUrl = "$ServerName/api/WsusComputerTargetV2"
-$wsusUpdateSummariesPerComputerTargetUrl = "$ServerName/api/WsusUpdateSummariesPerComputerV2"
+$rawComputerTargets = Get-MmsWsusComputerTarget
 
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-$rawComputerTargets = Invoke-RestMethod -Method Get -Uri $wsusComputerTargetUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-
-$updateSummaries = Invoke-RestMethod -Method Get -Uri $wsusUpdateSummariesPerComputerTargetUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$updateSummaries = Get-MmsWsusUpdateSummary
 
 $computerTargets = New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
 foreach ($target in $rawComputerTargets) {

@@ -16,7 +16,7 @@
 	Version:		1.1
 	Author:			neo42 GmbH
 	Creation Date:	29.11.2023
-	Purpose/Change: Align with new api and coding standards
+	Purpose/Change: Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 
 .EXAMPLE
 	.\List-LocalAdministrators.ps1
@@ -31,19 +31,25 @@ Param (
 	$OutputPath
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "LocalAdministrators.csv"
 
 # Filter with possible names of local admin groups
 filter groupFilter { if ($_.Name -EQ "Administratoren" -OR $_.Name -EQ "Administrators") { $_ } }
 
-$clientUrl = "$ServerName/api/client"
-$osUrl = "$ServerName/api/partialdiinformation/os"
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-$clients = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-$rawreports = Invoke-RestMethod -Method Get -Uri $osUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$clients = Get-MmsClient
+# The 'os' inventory area is what fills OperatingSystem.Groups.
+$rawreports = Get-MmsDeviceInformation -Type 'os'
 
 $reports = New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
 foreach ($report in $rawreports) {

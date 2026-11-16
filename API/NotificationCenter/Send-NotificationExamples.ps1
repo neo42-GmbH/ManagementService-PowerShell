@@ -1,4 +1,4 @@
-<#
+﻿<#
 	.SYNOPSIS
 		Example Script for the Management Service NotificationCenter Module
 	.DESCRIPTION
@@ -16,9 +16,17 @@ param (
 	[string]
 	$ServerName
 )
-$PSDefaultParameterValues["*-MMS*:ServerName"] = $ServerName
-import-Module -Force $PSScriptRoot\NotificationCenter.psm1
-$targets = Get-MMSNotificationCenterTargets | Where-Object {$_.Name -in $TargetNames }
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
+$targets = Get-MmsNotificationCenterTarget | Where-Object { $_.Name -in $TargetNames }
 $iconPath = "$PSScriptRoot\Icon.png"
 
 

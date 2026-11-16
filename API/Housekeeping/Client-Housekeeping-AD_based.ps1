@@ -18,14 +18,14 @@
 	Version:		1.1
 	Author:			neo42 GmbH
 	Creation Date:	29.11.2023
-	Purpose/Change:	Align with new api and coding standards
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 
 .EXAMPLE
 	.\Client-Housekeeping-AD_based.ps1 -ServerName "https://server.domain:4242"
 .EXAMPLE
 	.\Client-Housekeeping-AD_based.ps1 -ServerName "https://server.domain:4242" -ClientsToKeep "Example-Computer1","Example-Computer2"
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 Param (
 	[parameter(Mandatory = $true)]
 	[String]
@@ -34,6 +34,16 @@ Param (
 	[string[]]
 	$ClientsToKeep = [string[]]@()
 )
+
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
 
 # Testing for required Module
 if ($null -eq (Get-Module -listavailable -Name Activedirectory)) {
@@ -48,18 +58,17 @@ Enable-WindowsOptionalFeature -Online -FeatureName RSATClient-Roles-AD-Powershel
 }
 
 # Get Clientlist from MMS Server
-$url = "$ServerName/api/Client"
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-$clients = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$clients = Get-MmsClient
 
 foreach ($client in $clients) {
 	#Remove Entries that cannot be found in AD, keep Clients listed on the blacklist $ClientsToKeep
 	$CompObj = Get-Adcomputer -Filter "Name -eq `"$($client.Name)`"" -ErrorAction SilentlyContinue
 	if (($null -eq $CompObj) -and ($ClientsToKeep -notcontains $client.Name)) {
-		$deleteurl = "$ServerName/api/ServiceInfrastructureV3/$($client.Id)"
 		Write-Verbose "Removing Client $($Client.Name)"
-		Invoke-RestMethod -Method Delete -Uri $deleteurl -Headers $headers -UseDefaultCredentials
+		# -Confirm:$false because this script is meant to run unattended as a
+		# scheduled task. Run it once with -WhatIf to see what it would delete.
+		Remove-MmsClient -ClientId $client.Id -Confirm:$false
+		# Give the server a moment between deletions.
 		Start-Sleep -Seconds 1
 	}
 }

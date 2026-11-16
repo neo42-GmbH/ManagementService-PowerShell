@@ -22,13 +22,13 @@
 	Version:		1.1
 	Author:			neo42 GmbH
 	Creation Date:	29.11.2023
-	Purpose/Change:	Align with new api and coding standards
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .COMPONENT
 	neo42 Management Service 
 .EXAMPLE
 	.\Send-MmsMessage.ps1 -ServerName "https://server.domain:4242" -Domain "domain" -ClientName "client" -Header "Header" -BodyLineOne "BodyLineOne" -BodyLineTwo "BodyLineTwo"
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 param (
 	[parameter(Mandatory = $true)]
 	[String]
@@ -51,51 +51,26 @@ param (
 	
 )
 
-# Setup header
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
 
 # Search client
-$clientsearchurl = "$ServerName/api/client/$Domain/$ClientName"
-$client = Invoke-RestMethod -Method Get -Uri $clientsearchurl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-
-$msgObj = @{
-	Id                       = (New-Guid).Guid
-	ClientId                 = $client.Id
-	IsSent                   = $false
-	ExpirationDate           = $null
-	SentTime                 = $(Get-Date -Format yyyy-MM-ddTHH:mm:ss)
-	SentTimeOffset           = "02:00:00"
-	ClientRecievedTime       = "0001-01-01T00:00:00"
-	ClientRecievedTimeOffset = "00:00:00"
-	Notification             = @{
-		Id            = $msgId
-		Actions       = [array]@(
-			@{
-				'<ActionType>k__BackingField'  = 0
-				'<Arguments>k__BackingField'   = $null
-				'<ProcessPath>k__BackingField' = $null
-			}
-		)
-		ApplicationId = $null
-		Lines         = [array]@(
-			$Header
-		)
-		Icon          = $null
-		IconData      = $null
-		Type          = 7
-		Sound         = 0
-	}
+$client = Get-MmsClient -Domain $Domain -Name $ClientName
+if ($null -eq $client) {
+	Write-Warning "No client found for $($Domain)\$($ClientName)"
+	Exit 1
 }
 
-@($BodyLineOne, $BodyLineTwo) | ForEach-Object {
-	if ($true -ne [String]::IsNullOrEmpty($_)) {
-		$msgObj.Notification.Lines += $_
-	}
-}
-
-$body = [System.Text.RegularExpressions.Regex]::Unescape(($msgObj | ConvertTo-Json -Depth 10 -Compress))
-
-# Push notification to client
-$notificationPushUri = "$ServerName/api/StoreableNotification"
-Invoke-RestMethod -Method Post -Uri $notificationPushUri -Headers $headers -UseDefaultCredentials -Body $body -ContentType "application/json; charset=utf-8" -ErrorAction Stop
+# Send-MmsClientMessage builds the StoreableNotification body (including the
+# odd '<ActionType>k__BackingField' names the server expects) and posts it to
+# /api/StoreableNotification.
+# -Confirm:$false keeps this script non interactive; -WhatIf shows the message
+# without sending it.
+Send-MmsClientMessage -ClientId $client.Id -Header $Header -Line $BodyLineOne, $BodyLineTwo -Confirm:$false

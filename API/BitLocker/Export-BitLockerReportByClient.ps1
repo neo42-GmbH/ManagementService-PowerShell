@@ -17,10 +17,10 @@
 .OUTPUTS
 	none
 .NOTES
-	Version:		1.1
+	Version:		2.0
 	Author:			neo42 GmbH
 	Creation Date:	30.11.2023
-	Purpose/Change:	Align with new api and coding standards
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Export-BitLockerReportByClient.ps1 -ServerName "https://server.domain:4242" -Domain "domain" -ClientName "client"
 #>
@@ -29,7 +29,7 @@ Param (
 	[parameter(Mandatory = $true)]
 	[String]
 	$ServerName,
-	[parameter(Mandatory = $true)] 
+	[parameter(Mandatory = $true)]
 	[System.IO.DirectoryInfo]
 	$OutputPath,
 	[parameter(Mandatory = $true)]
@@ -40,25 +40,31 @@ Param (
 	$ClientName
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "BitLockerReport.csv"
 
-$clientByNameUrl = "$ServerName/api/Client/$Domain/$ClientName"
-$bitlockerReportUrl = "$ServerName/api/BitlockerReportV4/{CLIENTID}"
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-$client = Invoke-RestMethod -Method Get -Uri $clientByNameUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$client = Get-MmsClient -Domain $Domain -Name $ClientName
 
 if ($null -eq $client) {
 	Write-Warning "No client found for $($Domain)\$($ClientName)"
 	Exit 1
 }
 
-$report = Invoke-RestMethod -Method Get -Uri $bitlockerReportUrl.Replace("{CLIENTID}", "$($client.Id)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+# Get-MmsBitLockerReport unwraps the { Data, Errors, Meta } envelope of the API,
+# so the report properties are available directly.
+$report = Get-MmsBitLockerReport -ClientId $client.Id
 if ($null -eq $report) {
-	Write-Warning "No drive monitoring report found for $($Domain)\$($ClientName)"
+	Write-Warning "No BitLocker report found for $($Domain)\$($ClientName)"
 	Exit 1
 }
 
@@ -69,10 +75,10 @@ $Compliancestates[2] = "Compliant"
 
 $obj = New-Object System.Object
 $obj | Add-Member -type NoteProperty -name Client -value $client.NetBiosName
-$obj | Add-Member -type NoteProperty -name ReportDate -value $report.Data.CreationDate
-$obj | Add-Member -type NoteProperty -name State -value $Compliancestates[$report.Data.ComplianceState]
-$obj | Add-Member -type NoteProperty -name CurrentEncryptionTries -value $report.Data.CurrentEncryptionTriesCount
-$obj | Add-Member -type NoteProperty -name MaxEncryptionTries -value $report.Data.MaxEncryptionTriesCount
+$obj | Add-Member -type NoteProperty -name ReportDate -value $report.CreationDate
+$obj | Add-Member -type NoteProperty -name State -value $Compliancestates[$report.ComplianceState]
+$obj | Add-Member -type NoteProperty -name CurrentEncryptionTries -value $report.CurrentEncryptionTriesCount
+$obj | Add-Member -type NoteProperty -name MaxEncryptionTries -value $report.MaxEncryptionTriesCount
 
 $output = New-Object Collections.Generic.List[System.Object]
 $output.Add($obj)

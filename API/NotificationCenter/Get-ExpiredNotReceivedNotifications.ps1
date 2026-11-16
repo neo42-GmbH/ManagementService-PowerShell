@@ -1,4 +1,4 @@
-#requires -version 5
+﻿#requires -version 5
 <#
 .SYNOPSIS
 	Exports all expired Notifications that were not received by the target.
@@ -14,21 +14,26 @@ Param (
 	$OutputPath
 )
 
-$targetsUrl = "$ServerName/api/NotificationCenter/Target/All"
-$notificationsUrl = "$ServerName/api/NotificationCenter/Notifications/All"
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "ExpiredNotReceivedNotifications.csv"
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
 
 $targetType = @{
     0 = "Device"
     1 = "User"
 }
 
-$targets = Invoke-RestMethod -Method Get -Uri $targetsUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-$notifications = Invoke-RestMethod -Method Get -Uri $notificationsUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$targets = Get-MmsNotificationCenterTarget
+$notifications = Get-MmsNotification
 
 ## Filter for expired, and has targets that did not receive
 $notifications = $notifications | Where-Object { 

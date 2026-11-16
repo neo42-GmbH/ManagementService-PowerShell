@@ -16,7 +16,7 @@
     Version:        1.1
     Author:         neo42 GmbH
     Creation Date:  29.11.2023
-    Purpose/Change: Align with new api and coding standards
+    Purpose/Change: Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
     .\Export-WsusComputerTargetByClient.ps1 -ServerName "https://server.domain:4242" -Domain "domain" -ClientName "client"
 #>
@@ -36,18 +36,31 @@ Param (
     $ClientName
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "WsusComputerTargetReport.csv"
 
-$wsusComputerTargetByNetbiosUrl = "$ServerName/api/WsusComputerTargetV2/$([System.Guid]::Empty)?netBiosName={NETBIOSNAME}"
-$wsusUpdateSummariesPerComputerTargetUrl = "$ServerName/api/WsusUpdateSummariesPerComputerV2/{CLIENTNAME}"
+$computerTarget = Get-MmsWsusComputerTarget -NetBiosName "$($Domain)\$($ClientName)"
 
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
+# An unknown name does not answer with an error or with null: the route returns
+# an empty computer target whose Id is the empty guid. That is the value to test.
+if ($null -eq $computerTarget -or $computerTarget.Id -eq [System.Guid]::Empty) {
+	Write-Warning "No WSUS computer target found for $($Domain)\$($ClientName)"
+	Exit 1
+}
 
-$computerTarget = Invoke-RestMethod -Method Get -Uri $wsusComputerTargetByNetbiosUrl.Replace("{NETBIOSNAME}", "$($Domain)\$($ClientName)") -Headers $headers -UseDefaultCredentials
-
-$updateSummary = Invoke-RestMethod -Method Get -Uri $wsusUpdateSummariesPerComputerTargetUrl.Replace("{CLIENTNAME}", "$($computerTarget.FullDomainName)") -Headers $headers -UseDefaultCredentials
+# The WSUS update summary is addressed by the FullDomainName of the computer
+# target, not by the MMS client id.
+$updateSummary = Get-MmsWsusUpdateSummary -ComputerTarget $computerTarget.FullDomainName
 
 $output = New-Object Collections.Generic.List[System.Object]
 $obj = New-Object System.Object
