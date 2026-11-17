@@ -1,4 +1,4 @@
-#Requires -Version 5
+﻿#Requires -Version 5
 <#
 .SYNOPSIS
 	Deletes pipeline runs from the MMS database that exceed a given age or count per pipeline.
@@ -20,7 +20,7 @@
 .EXAMPLE
 	.\Pipeline-Runs-Housekeeping.ps1 -ServerName "https://server.domain:4242" -RemoveAfterDays 30 -MaximumRuns 4
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 Param (
     [parameter(Mandatory = $true)]
     [String]
@@ -33,36 +33,42 @@ Param (
     $MaximumRuns
 )
 
-# Get all pipelines from MMS Server.
-$url = "$ServerName/api/apc/PipelineSpecificationItem?languageKey=en"
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-$pipelines = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
 
-if ($pipelines.Success) {
-    foreach ($pipeline in $pipelines.Item) {   
-        # Get all runs of the pipeline from the MMS Server.
-        $url = "$ServerName/api/apc/PipelineRun/GetMany/$($pipeline.PhaseSpecificationItem.Id)"
-        $runs = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-        $count = 0;
+Connect-MmsApi -ServerName $ServerName
 
-        # Runs that never started have no StartTime; they are sorted last instead of raising an error.
-        foreach ($run in ($runs | Sort-Object { if ($_.StartTime) { Get-Date $_.StartTime } } -Descending)) {
-            if ($null -ne $run.StartTime -and $null -ne $run.EndTime) {
-                $count++    
-                $age = New-TimeSpan -Start (Get-Date $run.EndTime) -End (Get-Date)
-                if ($count -gt $MaximumRuns -or $age.Days -gt $RemoveAfterDays) {
-                    # Delete the given pipeline run from the MMS Server.
-                    $url = "$ServerName/api/apc/PipelineRun/$($run.RunId)"                    
-                    $result = Invoke-RestMethod -Method Delete -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-                }
-            }        
-            elseif ($run.State -eq 4 -and $null -eq $run.EndTime) {
-                # A run that is canceled while still queued (State 4 = Canceled) never gets a
-                # start or end time, It has not run anything, so we delete it right away.
-                $url = "$ServerName/api/apc/PipelineRun/$($run.RunId)"
-                $result = Invoke-RestMethod -Method Delete -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+# Get all pipelines from MMS Server. Get-MmsApcPipeline reads the documented
+# route /api/apc/Pipelines and unwraps the { Success, Item, Error } envelope.
+$pipelines = Get-MmsApcPipeline
+
+foreach ($pipeline in $pipelines) {
+    # Get all runs of the pipeline from the MMS Server.
+    $runs = Get-MmsApcPipelineRun -PipelineId $pipeline.Id
+    $count = 0;
+
+    # Runs that never started have no StartTime; they are sorted last instead of raising an error.
+    foreach ($run in ($runs | Sort-Object { if ($_.StartTime) { Get-Date $_.StartTime } } -Descending)) {
+        if ($null -ne $run.StartTime -and $null -ne $run.EndTime) {
+            $count++
+            $age = New-TimeSpan -Start (Get-Date $run.EndTime) -End (Get-Date)
+            if ($count -gt $MaximumRuns -or $age.Days -gt $RemoveAfterDays) {
+                # Delete the given pipeline run from the MMS Server.
+                # -Confirm:$false because this script is meant to run unattended as
+                # a scheduled task. Run it once with -WhatIf to see what it would
+                # delete.
+                Remove-MmsApcPipelineRun -RunId $run.RunId -Confirm:$false
             }
+        }
+        elseif ($run.StateName -eq 'Canceled' -and $null -eq $run.EndTime) {
+            # A run that is canceled while still queued never gets a start or end
+            # time. It has not run anything, so it is deleted right away.
+            Remove-MmsApcPipelineRun -RunId $run.RunId -Confirm:$false
         }
     }
 }

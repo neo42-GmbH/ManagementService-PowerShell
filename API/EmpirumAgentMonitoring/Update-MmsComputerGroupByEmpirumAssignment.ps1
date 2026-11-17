@@ -25,12 +25,12 @@
 	Version:				1.2
 	Author:					neo42 GmbH
 	Creation Date:			30.11.2023
-	Purpose/Change:			Initial version
+	Purpose/Change:			Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 	Required MMS Server:	2.8.5.0
 .EXAMPLE
 	.\Update-MmsComputerGroupByEmpirumAssignment.ps1 -ServerName "https://server.domain:4242" -FilterName "Empirum Package Assignment" -EmpirumDBServer "EmpirumServer\Instance" -EmpirumDBName "EmpirumDB" -EmpirumPackageName "Package Name"
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 Param (
 	[parameter(Mandatory = $true)]
 	[String]
@@ -46,13 +46,18 @@ Param (
 	$EmpirumDBName,
 	[parameter(Mandatory = $true)]
 	[String]
-	$EmpirumPackageName,
-	[parameter(Mandatory = $false)]
-	[switch]
-	$WhatIf
+	$EmpirumPackageName
 )
 
-$csUrl = "$ServerName/api/criteriastorev3"
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
 
 # Testing for required Module
 if ($null -eq (Get-Command -Name Invoke-Sqlcmd)) {
@@ -63,28 +68,16 @@ Install-Module SqlServer"
 	exit 1
 }
 
-# Setup header
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-# Load all filter and detect filter to edit
-$filterList = Invoke-RestMethod -Method Get -Uri $csUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-$targetFilter = $null
-$criteriaParsed = $null
-
-foreach ($filter in $filterList) {
-	$criteriaParsed = $filter.Criteria | ConvertFrom-Json 
-	if ($criteriaParsed.Name -eq $FilterName) {
-		$targetFilter = $filter
-		break
-	}
-}
-
+# Load the filter to edit. Get-MmsFilter -Name parses the Criteria json and
+# matches on the name inside it, and adds the parsed form as CriteriaObject.
+$targetFilter = Get-MmsFilter -Name $FilterName | Select-Object -First 1
 
 if ($null -eq $targetFilter) {
 	Write-Error "No filter found with name '$FilterName'"
 	Exit 1
 }
+
+$criteriaParsed = $targetFilter.CriteriaObject
 
 if (($targetFilter.Type -ne 3)) {
 	Write-Error "Filter is not from type 'ComputernameList'. Current filter type: '$($criteriaParsed.Type)'"
@@ -107,15 +100,8 @@ $empClients = Invoke-Sqlcmd -Query $query -ServerInstance $EmpirumDBServer -Data
 
 # Set filter content to clientlist
 $criteriaParsed.Data.ComputernameList = $empClients
-$targetFilter.Criteria = ConvertTo-Json $criteriaParsed -Compress
 
-# Update filter
-if ($false -eq $WhatIf) {
-	Invoke-RestMethod -Method Post -Uri $ServerName/api/criteriastorev3 -Headers $headers -UseDefaultCredentials -Body ($targetFilter | ConvertTo-Json) -ContentType "application/json; charset=utf-8"
-}
-else {
-	Write-Output "WhatIf mode detected, would send the following request:"
-	Write-Output "Url= $csUrl"
-	Write-Output $("Clients: $empClients" -replace " ", "`n")
-	Start-Sleep 10
-}
+Write-Verbose ("Clients to write into the filter:`n" + ($empClients -join "`n"))
+
+# Update filter. Run with -WhatIf to see the request without sending it.
+Set-MmsFilter -Filter $targetFilter -Criteria $criteriaParsed -Confirm:$false

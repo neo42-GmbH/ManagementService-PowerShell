@@ -1,4 +1,4 @@
-#requires -version 5
+﻿#requires -version 5
 <#
 .SYNOPSIS
 	Exports the state of all notifications of a specific target.
@@ -17,37 +17,42 @@ Param (
 	$OutputPath
 )
 
-$targetsUrl = "$ServerName/api/NotificationCenter/Target/All"
-$notificationsClientBaseUrl = "$ServerName/api/NotificationCenter/Notifications/Client"
-$notificationsBaseUrl = "$ServerName/api/NotificationCenter/Notifications"
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "ClientNotificationReport.csv"
 
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-$targets = Invoke-RestMethod -Method Get -Uri $targetsUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$targets = Get-MmsNotificationCenterTarget
 
 $target = $targets | Where-Object { $_.Name -eq $TargetName }
 if ($null -eq $target) {
     throw "$TargetName was not found"
 }
 
+# Get-MmsNotification -ClientId returns { Notification, Targets } entries, so the
+# per target delivery state is already included and no second lookup per
+# notification is needed.
 $notifications = @()
 foreach ($clientId in $target.ClientIds) {
-    $notifications += Invoke-RestMethod -Method Get -Uri ( $notificationsClientBaseUrl + "?clientId=$clientId" ) -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+    $notifications += Get-MmsNotification -ClientId $clientId
 }
 
-
 $output = @()
-foreach ($notification in $notifications) {
-    $matchingNotificationReport = Invoke-RestMethod -Method Get -Uri ( $notificationsBaseUrl + "/" + $notification.Id ) -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-    $targetInfo = $matchingNotificationReport.Targets | Where-Object { $_.ClientId -in $target.ClientIds } | Select-Object -First 1
+foreach ($entry in $notifications) {
+    $targetInfo = $entry.Targets | Where-Object { $_.ClientId -in $target.ClientIds } | Select-Object -First 1
 
     $output += [PSCustomObject]@{
-        notificationId = $notification.Id
-        notificationCreated = $notification.Message.CreationDate
-        notificationGroup = $notification.Message.NotificationGroup
+        notificationId = $entry.Notification.Id
+        notificationCreated = $entry.Notification.Message.CreationDate
+        notificationGroup = $entry.Notification.Message.NotificationGroup
         notificationSent = $targetInfo.IsSent
         notificationSentDate = $targetInfo.SentTime
         notificationReceivedDate = $targetInfo.ReceivedTime

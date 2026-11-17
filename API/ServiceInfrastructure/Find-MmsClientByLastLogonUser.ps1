@@ -21,7 +21,7 @@
 	Version:				1.1
 	Author:					neo42 GmbH
 	Creation Date:			30.11.2021
-	Purpose/Change:			Align with new api and coding standards
+	Purpose/Change:			Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 	Required MMS Server:	2.8.5.0
 .EXAMPLE
 	.\Find-MmsClientByLastLogonUser.ps1 -ServerName "https://server.domain:4242" -Domain "domain" -UserName "user"
@@ -42,18 +42,23 @@ param (
 	$UserName
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "$($Domain)_$($UserName).csv"
 
-$clientUrl = "$ServerName/api/Client"
-$siUrl = "$ServerName/api/ServiceInfrastructureV3/{CLIENTID}"
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-$clients = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$clients = Get-MmsClient
 
 foreach ($client in $clients) {
-	$report = Invoke-RestMethod -Method Get -Uri $siUrl.Replace("{CLIENTID}", $($client.Id)) -Headers $headers -UseDefaultCredentials
+	$report = Get-MmsServiceInfrastructureReport -ClientId $client.Id
 	if ($null -eq $report) {
 		continue
 	}

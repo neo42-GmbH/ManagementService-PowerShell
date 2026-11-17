@@ -1,4 +1,4 @@
-# Empirum Cleanup API - Workflow 7: Job Status Monitor
+﻿# Empirum Cleanup API - Workflow 7: Job Status Monitor
 # Monitors active jobs and displays status until completion
 
 param(
@@ -19,12 +19,18 @@ param(
 )
 
 # Load module
-Import-Module "$PSScriptRoot\neo42MmsApiModule.psm1" -Force
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
 
 Write-Host "Empirum Cleanup API - Job Status Monitor" -ForegroundColor Cyan
 
-# Configure server
-Set-Neo42ServerName -ServerName $ServerName
+# Open the session that every following call uses
+Connect-MmsApi -ServerName $ServerName
 
 # Status descriptions
 $statusDescriptions = @{
@@ -109,7 +115,7 @@ try {
 
                 # Show protocol entries (last 5)
                 try {
-                    $protocols = Get-MmsApcEmpCleanupProtocols -JobId $JobId -CultureCode "en"
+                    $protocols = Get-MmsApcEmpCleanupProtocol -JobId $JobId -CultureCode "en"
                     if ($protocols -and $protocols.Count -gt 0) {
                         Write-Host "`nLatest protocol entries:" -ForegroundColor Yellow
                         $protocols | Sort-Object Time -Descending | Select-Object -First 5 | ForEach-Object {

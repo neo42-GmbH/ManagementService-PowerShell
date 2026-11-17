@@ -1,4 +1,4 @@
-# Empirum Cleanup API - Workflow 6: Cleanup with filter NoAssignmentNoInstallApproved
+﻿# Empirum Cleanup API - Workflow 6: Cleanup with filter NoAssignmentNoInstallApproved
 # Starts cleanup for filtered packages without assignment and without install approval
 
 param(
@@ -23,13 +23,19 @@ param(
 )
 
 # Load module
-Import-Module "$PSScriptRoot\neo42MmsApiModule.psm1" -Force
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
 
 Write-Host "Empirum Cleanup API - Filter Cleanup (NoInstallApproved)" -ForegroundColor Cyan
 
 
-# Configure server
-Set-Neo42ServerName -ServerName $ServerName
+# Open the session that every following call uses
+Connect-MmsApi -ServerName $ServerName
 
 # Retrieve package list
 Write-Host "`nRetrieving package list (NoAssignmentNoInstallApproved)..." -ForegroundColor Yellow

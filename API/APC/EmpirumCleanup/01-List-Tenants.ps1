@@ -1,4 +1,4 @@
-# Empirum Cleanup API - Workflow 1: List tenants
+﻿# Empirum Cleanup API - Workflow 1: List tenants
 # Displays all available tenants and pauses for notes
 
 param(
@@ -7,13 +7,19 @@ param(
 )
 
 # Load module
-Import-Module "$PSScriptRoot\neo42MmsApiModule.psm1" -Force
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
 
 Write-Host "Empirum Cleanup API - Tenant List" -ForegroundColor Cyan
 
 
-# Configure server
-Set-Neo42ServerName -ServerName $ServerName
+# Open the session that every following call uses
+Connect-MmsApi -ServerName $ServerName
 
 # Retrieve all tenants
 Write-Host "`nRetrieving all tenants..." -ForegroundColor Yellow

@@ -16,11 +16,11 @@
 	Version:		1.2
 	Author:			neo42 GmbH
 	Creation Date:	30.08.2024
-	Purpose/Change:	Handle empty LastAccess property.
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Client-Housekeeping-LastContact_based.ps1 -ServerName "https://server.domain:4242" -RemoveAfterDays 90
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 Param (
 	[parameter(Mandatory = $true)]
 	[String]
@@ -30,10 +30,17 @@ Param (
 	$RemoveAfterDays
 )
 
-$url = "$ServerName/api/Client"
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-$clients = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
+$clients = Get-MmsClient
 
 foreach ($client in $clients) {
     if ($false -eq [string]::IsNullOrEmpty($client.LastAccess)) {
@@ -47,9 +54,11 @@ foreach ($client in $clients) {
 		continue
     }
 	if ($lastContact -lt ((Get-Date).AddDays(-$RemoveAfterDays))) {
-		[uri]$deleteUrl = "$ServerName/api/ServiceInfrastructureV3/$($client.Id)"
 		Write-Host "Deleting $($client.Name) with ID $($client.Id) because of last contact at $($lastContact)"
-		Invoke-RestMethod -Method Delete -Uri $deleteUrl -Headers $headers -UseDefaultCredentials
+		# -Confirm:$false because this script is meant to run unattended as a
+		# scheduled task. Run it once with -WhatIf to see what it would delete.
+		Remove-MmsClient -ClientId $client.Id -Confirm:$false
+		# Give the server a moment between deletions.
 		Start-Sleep -Milliseconds 100
 	}
 }

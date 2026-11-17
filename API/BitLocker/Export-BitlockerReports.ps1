@@ -13,10 +13,10 @@
 .OUTPUTS
 	none
 .NOTES
-	Version:		1.1
+	Version:		2.0
 	Author:			neo42 GmbH
 	Creation Date:	30.11.2023
-	Purpose/Change:	Align with new api and coding standards
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	./Export-BitlockerReports.ps1 -ServerName "https://server.domain:4242"
 #>
@@ -25,26 +25,30 @@ Param (
 	[Parameter(Mandatory = $true)]
 	[string]
 	$ServerName,
-	[parameter(Mandatory = $true)]	
+	[parameter(Mandatory = $true)]
 	[System.IO.DirectoryInfo]
 	$OutputPath
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+# Opens the session that every following call uses. Add -Credential to run as
+# another Windows account.
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "BitlockerReports.csv"
 
-# prepare request headers
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
+$clients = Get-MmsClient
 
-# Get Clientlist from MMS Server
-$clientUrl = "$ServerName/api/Client"
-$bitlockerReportUrl = "$ServerName/api/BitlockerReportV4"
-
-$clients = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-
-#  Append this URL with /[ClientID] to get only the specified report
-$BitlockerReports = Invoke-RestMethod -Method Get -Uri "$bitlockerReportUrl" -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+# Pass -ClientId to get only the report of a single client
+$BitlockerReports = Get-MmsBitLockerReport
 $BitlockerReportCollection = New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
 foreach ($BitlockerReport in $BitlockerReports) {
 	$BitlockerReportCollection.Add($BitlockerReport.ClientID, $BitlockerReport)

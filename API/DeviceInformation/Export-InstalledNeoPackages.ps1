@@ -16,7 +16,7 @@
 	Version:        1.0
 	Author:         neo42 GmbH
 	Creation Date:  30.11.2023
-	Purpose/Change: Initial version
+	Purpose/Change: Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Export-InstalledNeoPackages.ps1 -ServerName "https://server.domain:4242"
 #>
@@ -30,22 +30,25 @@ Param (
 	$OutputPath
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "InstalledNeoPackages.csv"
 
-$clientUrl = "$ServerName/api/Client/$Domain/$ClientName"
-$deviceInformationSoftwareUrl = "$ServerName/api/DeviceInformationV2/?type=sw"
-
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-$clientsRaw = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$clientsRaw = Get-MmsClient
 $clientsDict = New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
 foreach ($client in $clientsRaw) {
     $clientsDict.Add($client.Id, ($client | Select-Object -Property NetBiosName, Id))
 }
 
-$deviceInformationSoftware = Invoke-RestMethod -Method Get -Uri $deviceInformationSoftwareUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$deviceInformationSoftware = Get-MmsDeviceInformation -Type 'sw'
 
 $packages = @()
 $deviceInformationSoftware | ForEach-Object {

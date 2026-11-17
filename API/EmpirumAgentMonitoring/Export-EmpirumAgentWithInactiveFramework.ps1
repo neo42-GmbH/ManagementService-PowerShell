@@ -16,7 +16,7 @@
 	Version:        1.0
 	Author:         neo42 GmbH
 	Creation Date:  30.11.2023
-	Purpose/Change: Initial version
+	Purpose/Change: Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Export-EmpirumAgentWithInactiveFramework.ps1 -ServerName "https://server.domain:4242"
 #>
@@ -30,22 +30,26 @@ Param (
 	$OutputPath
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "EmpirumAgentMonitoringReports.csv"
 
-$clientUrl = "$ServerName/api/Client"
-$empirumReportUrl = "$ServerName/api/EmpirumMonitoringReportV2"
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-$clientsRaw = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$clientsRaw = Get-MmsClient
 $clientsDict = New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
 foreach ($client in $clientsRaw) {
     $clientsDict.Add($client.Id, ($client | Select-Object -Property NetBiosName, Id))
 }
 
-$reports = Invoke-RestMethod -Method Get -Uri $empirumReportUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$reports = Get-MmsEmpirumMonitoringReport
 
 $inactiveClients = $reports | Where-Object { $_.Report.UafActive -eq $false } | 
 Select-Object -Property @{Name = 'Client'; Expression = { $clientsDict[$_.Report.ClientId].NetBiosName } },

@@ -1,4 +1,4 @@
-#requires -version 5
+﻿#requires -version 5
 <#
 .SYNOPSIS
 	Aggregates the data shown on the "ReportDetails" page (WSUS view) for a single client via the API.
@@ -25,7 +25,7 @@
 	Version:		1.0
 	Author:			neo42 GmbH
 	Creation Date:	05.05.2026
-	Purpose/Change:	Initial version — reproduce the WSUS ReportDetails view via API.
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Export-WsusReportDetailsByClient.ps1 -ServerName "https://server.domain:4242" -Domain "domain" -ClientName "client"
 #>
@@ -45,36 +45,43 @@ Param (
 	$ClientName
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "WsusReportDetails_$($Domain)_$($ClientName).csv"
 
-$clientByNameUrl = "$ServerName/api/Client/$Domain/$ClientName"
-$siReportUrl = "$ServerName/api/ServiceInfrastructureV3/{CLIENTID}"
-$wsusComputerTargetByNetbiosUrl = "$ServerName/api/WsusComputerTargetV2/$([System.Guid]::Empty)?netBiosName={NETBIOSNAME}"
-$wsusUpdateSummariesPerComputerTargetUrl = "$ServerName/api/WsusUpdateSummariesPerComputerV2/{CLIENTNAME}"
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-$client = Invoke-RestMethod -Method Get -Uri $clientByNameUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$client = Get-MmsClient -Domain $Domain -Name $ClientName
 if ($null -eq $client) {
 	Write-Warning "No client found for $($Domain)\$($ClientName)"
 	Exit 1
 }
 
-$siReport = Invoke-RestMethod -Method Get -Uri $siReportUrl.Replace("{CLIENTID}", "$($client.Id)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$siReport = Get-MmsServiceInfrastructureReport -ClientId $client.Id
 if ($null -eq $siReport) {
 	Write-Warning "No Service Infrastructure report found for $($Domain)\$($ClientName)"
 	Exit 1
 }
 
-$computerTarget = Invoke-RestMethod -Method Get -Uri $wsusComputerTargetByNetbiosUrl.Replace("{NETBIOSNAME}", "$($Domain)\$($ClientName)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
-if ($null -eq $computerTarget) {
+$computerTarget = Get-MmsWsusComputerTarget -NetBiosName "$($Domain)\$($ClientName)"
+
+# An unknown name does not answer with an error or with null: the route returns
+# an empty computer target whose Id is the empty guid. That is the value to test.
+if ($null -eq $computerTarget -or $computerTarget.Id -eq [System.Guid]::Empty) {
 	Write-Warning "No WSUS computer target found for $($Domain)\$($ClientName)"
 	Exit 1
 }
 
-$updateSummary = Invoke-RestMethod -Method Get -Uri $wsusUpdateSummariesPerComputerTargetUrl.Replace("{CLIENTNAME}", "$($computerTarget.FullDomainName)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+# The WSUS update summary is addressed by the FullDomainName of the computer
+# target, not by the MMS client id.
+$updateSummary = Get-MmsWsusUpdateSummary -ComputerTarget $computerTarget.FullDomainName
 if ($null -eq $updateSummary) {
 	Write-Warning "No WSUS update summary found for $($computerTarget.FullDomainName)"
 	Exit 1

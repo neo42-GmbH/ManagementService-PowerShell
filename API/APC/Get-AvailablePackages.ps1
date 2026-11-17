@@ -1,4 +1,4 @@
-#requires -version 5
+﻿#requires -version 5
 <#
 .SYNOPSIS
 	List all known packages.
@@ -16,7 +16,7 @@
 	Version:        1.0
 	Author:         neo42 GmbH
 	Creation Date:  04.11.2024
-	Purpose/Change: Initial release
+	Purpose/Change: Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Get-AvailablePackages.ps1 -ServerName "https://server.domain:4242"
 #>
@@ -30,14 +30,20 @@ Param (
 	$OutputPath
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "AvailablePackages.csv"
 
-$dpURL = "$ServerName/api/apc/DefaultPackage/all/0"
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-$response = Invoke-RestMethod -Method Get -Uri $dpURL -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$response = Get-MmsApcDefaultPackage
 
 $packageType = @{
     0 = "Depot"

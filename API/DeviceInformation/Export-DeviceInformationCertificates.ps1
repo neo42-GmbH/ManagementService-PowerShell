@@ -1,4 +1,4 @@
-#requires -version 5
+﻿#requires -version 5
 <#
 .SYNOPSIS
 	Exports all certificate information from the Device Information plug-in
@@ -18,7 +18,7 @@
 	Version:        1.1
 	Author:         neo42 GmbH
 	Creation Date:  29.11.2023
-	Purpose/Change: Align with new api and coding standards
+	Purpose/Change: Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Export-DeviceInformationCertificates.ps1 -ServerName "https://server.domain:4242"
 #>
@@ -32,15 +32,19 @@ Param (
 	$OutputPath
 )
 
-$clientUrl = "$ServerName/api/Client"
-$deviceInformationCertReportUrl = "$ServerName/api/DeviceInformationV2?type=cert"
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
 
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "DeviceInformationCertificates_{COUNTER}.csv"
 
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-$clientsRaw = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$clientsRaw = Get-MmsClient
 $clientsDict = New-Object "System.Collections.Generic.Dictionary[[System.Guid],[System.Object]]"
 foreach ($client in $clientsRaw) {
 	$clientsDict.Add($client.Id, $client.NetBiosName)
@@ -59,8 +63,7 @@ do {
 		$fileNameCounter++
 	}
 	$output = New-Object Collections.Generic.List[System.Object]
-	$url = "$deviceInformationCertReportUrl&offset=$offset&limit=$limit"
-	$page = Invoke-RestMethod -Method Get -Uri $url -Headers $headers -UseDefaultCredentials
+	$page = Get-MmsDeviceInformation -Type 'cert' -Offset $offset -Limit $limit
 	$page | ForEach-Object {
 		if ($clientsDict.ContainsKey($_.Id)) {
 			foreach ($store in $_.OperatingSystem.CertificateStores) {

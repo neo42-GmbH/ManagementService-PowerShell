@@ -5,6 +5,9 @@
 .DESCRIPTION
 	An Example to show how to interact with the neo42 Management Service Api
 	to receive Bitlocker RecoveryKeys
+
+	Caution: the resulting csv contains recovery keys in clear text. Store it
+	accordingly and delete it when it is no longer needed.
 .PARAMETER ServerName
 	The servername of the neo42 Management Service.
 .PARAMETER OutputPath
@@ -13,10 +16,10 @@
 .OUTPUTS
 	none
 .NOTES
-	Version:		1.1
+	Version:		2.0
 	Author:			neo42 GmbH
 	Creation Date:	30.11.2023
-	Purpose/Change:	Align with new api and coding standards
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	./Export-BitlockerRecoveryKeys.ps1 -ServerName "https://server.domain:4242"
 #>
@@ -25,27 +28,28 @@ Param (
 	[Parameter(Mandatory = $true)]
 	[string]
 	$ServerName,
-	[parameter(Mandatory = $true)]	
+	[parameter(Mandatory = $true)]
 	[System.IO.DirectoryInfo]
 	$OutputPath
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "BitlockerRecoveryKeys.csv"
 
-#prepare request headers
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-# Get Clientlist from MMS Server
-$clientUrl = "$ServerName/api/client"
-$adRecoveryKeyUrl = "$ServerName/api/BitlockerAdRecoveryKey?clientId={CLIENTID}"
-$mmsRecoveryKeyUrl = "$ServerName/api/BitlockerInBuiltRecoveryKey/{CLIENTID}"
-
-$clients = Invoke-RestMethod -Method Get -Uri $clientUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$clients = Get-MmsClient
 
 foreach ($client in $clients) {
-	$AdRecoveryKeys = Invoke-RestMethod -Method Get -Uri $adRecoveryKeyUrl.Replace('{CLIENTID}', $client.id) -Headers $headers -UseDefaultCredentials
+	$AdRecoveryKeys = Get-MmsBitLockerRecoveryKey -ClientId $client.Id -Source Ad
 	$AdRecoveryKeys | Select-Object -ExcludeProperty key *, @{
 		Label      = "StoredIn"
 		Expression = { "AD" }
@@ -53,14 +57,13 @@ foreach ($client in $clients) {
 		Label      = "key"
 		Expression = { $([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.key))) }
 	} | Export-Csv -NoTypeInformation -Append -Path $filePath -Encoding UTF8
-	$MMSRecoveryKeys = Invoke-RestMethod -Method Get -Uri $mmsRecoveryKeyUrl.Replace('{CLIENTID}', $client.id) -Headers $headers -UseDefaultCredentials
-	if ($MMSRecoveryKeys -ne "null" -and $false -eq [string]::IsNullOrWhiteSpace($MMSRecoveryKeys)) {
-		$MMSRecoveryKeys | Select-Object -ExcludeProperty key *, @{
-			Label      = "StoredIn"
-			Expression = { "MMS" }
-		}, @{
-			Label      = "key"
-			Expression = { $([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.key))) }
-		} | Export-Csv -NoTypeInformation -Append -Path $filePath -Encoding UTF8
-	}
+
+	$MMSRecoveryKeys = Get-MmsBitLockerRecoveryKey -ClientId $client.Id -Source Mms
+	$MMSRecoveryKeys | Select-Object -ExcludeProperty key *, @{
+		Label      = "StoredIn"
+		Expression = { "MMS" }
+	}, @{
+		Label      = "key"
+		Expression = { $([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.key))) }
+	} | Export-Csv -NoTypeInformation -Append -Path $filePath -Encoding UTF8
 }

@@ -1,4 +1,4 @@
-# Empirum Cleanup API - Workflow 3: Export NoAssignmentNoInstallApproved CSV
+﻿# Empirum Cleanup API - Workflow 3: Export NoAssignmentNoInstallApproved CSV
 # Exports all packages without assignment and without install approval to CSV
 
 param(
@@ -15,13 +15,19 @@ param(
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "NoAssignmentNoInstallApproved.csv"
 
 # Load module
-Import-Module "$PSScriptRoot\neo42MmsApiModule.psm1" -Force
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
 
 Write-Host "Empirum Cleanup API - Export NoAssignmentNoInstallApproved" -ForegroundColor Cyan
 
 
-# Configure server
-Set-Neo42ServerName -ServerName $ServerName
+# Open the session that every following call uses
+Connect-MmsApi -ServerName $ServerName
 
 # Retrieve package list
 Write-Host "`nRetrieving package list (NoAssignmentNoInstallApproved)..." -ForegroundColor Yellow

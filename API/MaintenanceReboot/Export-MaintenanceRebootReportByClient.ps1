@@ -20,7 +20,7 @@
 	Version:		1.1
 	Author:			neo42 GmbH
 	Creation Date:	29.11.2023
-	Purpose/Change:	Align with new api and coding standards
+	Purpose/Change:	Use the Neo42.MmsApi module instead of raw Invoke-RestMethod
 .EXAMPLE
 	.\Export-MaintenanceRebootReportByClient.ps1 -ServerName "https://server.domain:4242" -Domain "domain" -ClientName "client"
 .EXAMPLE
@@ -42,25 +42,29 @@ Param (
 	$ClientName
 )
 
+# Use an installed Neo42.MmsApi module if there is one, otherwise the copy that
+# ships with this repository.
+$mmsModule = 'Neo42.MmsApi'
+if (-not (Get-Module -ListAvailable -Name $mmsModule)) {
+	$mmsModule = Join-Path -Path $PSScriptRoot -ChildPath '..\..\Neo42.MmsApi\Neo42.MmsApi.psd1'
+}
+Import-Module -Name $mmsModule -ErrorAction Stop
+
+Connect-MmsApi -ServerName $ServerName
+
 # Filename with the collected data
 $filePath = Join-Path -Path $OutputPath.FullName -ChildPath "MaintenanceRebootReport.csv"
 
-$clientByNameUrl = "$ServerName/api/Client/$Domain/$ClientName"
-$maintenanceRebootReportUrl = "$ServerName/api/MaintenanceReportV3/{CLIENTID}"
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("X-Neo42-Auth", "Admin")
-
-$client = Invoke-RestMethod -Method Get -Uri $clientByNameUrl -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$client = Get-MmsClient -Domain $Domain -Name $ClientName
 
 if ($null -eq $client) {
 	Write-Warning "No client found for $($Domain)\$($ClientName)"
 	Exit 1
 }
 
-$report = Invoke-RestMethod -Method Get -Uri $maintenanceRebootReportUrl.Replace("{CLIENTID}", "$($client.Id)") -Headers $headers -UseDefaultCredentials -ErrorAction Stop
+$report = Get-MmsMaintenanceRebootReport -ClientId $client.Id
 if ($null -eq $report) {
-	Write-Warning "No drive monitoring report found for $($Domain)\$($ClientName)"
+	Write-Warning "No maintenance reboot report found for $($Domain)\$($ClientName)"
 	Exit 1
 }
 
